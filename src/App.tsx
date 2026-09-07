@@ -317,13 +317,6 @@ export default function App() {
         lower.includes('kitchen')
       ) {
         handleSelectShowroom('appliances', 'agent');
-      } else if (
-        lower.includes('server') ||
-        lower.includes('edge') ||
-        lower.includes('rack') ||
-        lower.includes('datacenter')
-      ) {
-        handleSelectShowroom('edge_server', 'agent');
       }
 
       // 3. Autonomous Negotiation & Closer Psychology Detection

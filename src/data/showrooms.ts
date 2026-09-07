@@ -144,54 +144,6 @@ export const SHOWROOMS_DATA: Record<ShowroomId, ShowroomItem> = {
       },
     ],
   },
-
-  edge_server: {
-    id: 'edge_server',
-    name: 'Neural AI Edge Rack (TitanBlade X8)',
-    category: 'High-Density Compute Infrastructure',
-    tagline: 'Sub-350ms Real-Time Voice Processing & Neural Inference Unit',
-    description: 'Purpose-built 2U enterprise blade server engineered with Agora hardware-accelerated DSP audio codecs and dual liquid-vapor chambers for continuous conversational throughput.',
-    badge: 'Enterprise Flagship',
-    basePrice: 240000,
-    accentColor: '#8b5cf6', // Violet
-    ambientColor: '#3b0764',
-    recommendedFor: 'Enterprises deploying on-premise private voice clouds with strict zero-data-leakage mandates.',
-    voiceTriggers: ['server', 'edge', 'blade', 'rack', 'titanblade', 'compute', 'hardware', 'datacenter', 'infra'],
-    specs: [
-      { label: 'Neural DSP Cores', value: '128 Agora RTN Cores' },
-      { label: 'E2E Voice Latency', value: 'sub-25ms Local Codec' },
-      { label: 'Throughput', value: '4,000 Concurrent Calls' },
-      { label: 'Cooling System', value: 'Dual Phase Vapor-Chamber' },
-      { label: 'I/O Connectivity', value: 'Dual 100GbE QSFP28' },
-      { label: 'Compliance', value: 'SOC2 Type II, HIPAA, FIPS 140-3' },
-    ],
-    hotspots: [
-      {
-        id: 'hs-dsp',
-        title: 'Agora Hardware DSP Engine',
-        subtitle: 'Sub-25ms voice frame transcoding',
-        position: [0, 0.4, 0.5],
-        details: 'Hardware-accelerated acoustic echo cancellation (AEC), noise suppression (NS), and beamforming processing 192kHz uncompressed audio streams.',
-        metric: '< 25ms DSP Pipeline',
-      },
-      {
-        id: 'hs-cooling',
-        title: 'CryoVapor Thermal Heatsink',
-        subtitle: 'Dual copper vapor chamber',
-        position: [-0.6, 0.2, -0.2],
-        details: 'Maintains optimal thermal dissipation even under continuous 100% LLM inference load across all 8 modular blade cartridges.',
-        metric: '48°C Max Delta T',
-      },
-      {
-        id: 'hs-fans',
-        title: 'Twin MagLev Exhaust Fans',
-        subtitle: 'Counter-rotating high CFM array',
-        position: [0.6, 0.1, -0.8],
-        details: 'Vibration-damped magnetic levitation bearings ensuring acoustic silence in executive showroom environments.',
-        metric: '18.2 dBA Ultra-Quiet',
-      },
-    ],
-  },
 };
 
-export const SHOWROOM_KEYS: ShowroomId[] = ['bike', 'laptop', 'appliances', 'edge_server'];
+export const SHOWROOM_KEYS: ShowroomId[] = ['bike', 'laptop', 'appliances'];

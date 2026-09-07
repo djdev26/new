@@ -260,11 +260,8 @@ export const ShowroomCanvas3D: React.FC<ShowroomCanvas3DProps> = ({
         buildNeuralLaptop(modelGroup, accentColor, wireframeMode);
         break;
       case 'appliances':
-        buildSmartRefrigerator(modelGroup, accentColor, wireframeMode);
-        break;
-      case 'edge_server':
       default:
-        buildEdgeServer(modelGroup, accentColor, wireframeMode);
+        buildSmartRefrigerator(modelGroup, accentColor, wireframeMode);
         break;
     }
 

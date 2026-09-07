@@ -164,7 +164,7 @@ export interface AnalyticsData {
   stageConversionFunnel: Array<{ stage: string; count: number }>;
 }
 
-export type ShowroomId = 'bike' | 'laptop' | 'appliances' | 'edge_server';
+export type ShowroomId = 'bike' | 'laptop' | 'appliances';
 
 export interface ShowroomHotspot {
   id: string;

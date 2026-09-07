@@ -5,7 +5,6 @@ import {
   Bike,
   Laptop,
   Refrigerator,
-  Server,
   Sparkles,
   Zap,
   Mic,
@@ -35,10 +34,8 @@ export const ShowroomDrawer: React.FC<ShowroomDrawerProps> = ({
       case 'laptop':
         return <Laptop className="h-4 w-4" />;
       case 'appliances':
-        return <Refrigerator className="h-4 w-4" />;
-      case 'edge_server':
       default:
-        return <Server className="h-4 w-4" />;
+        return <Refrigerator className="h-4 w-4" />;
     }
   };
 
@@ -76,8 +73,8 @@ export const ShowroomDrawer: React.FC<ShowroomDrawerProps> = ({
         )}
       </div>
 
-      {/* Showroom Tab Buttons Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      {/* Showroom Tab Buttons Grid - 3 Showrooms */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {SHOWROOM_KEYS.map((key) => {
           const item = SHOWROOMS_DATA[key];
           const isSelected = currentShowroomId === key;
@@ -120,7 +117,7 @@ export const ShowroomDrawer: React.FC<ShowroomDrawerProps> = ({
               <div className="mt-2 pt-1.5 border-t border-slate-200/70 flex items-center justify-between text-[10px]">
                 <span className="font-semibold text-indigo-600">3D Interactive</span>
                 <span className="text-slate-400 font-mono">
-                  {key === 'bike' ? '85kW · 220mi' : key === 'laptop' ? '50 TOPS · 4K' : key === 'appliances' ? '29" OLED · 680L' : '128 Cores'}
+                  {key === 'bike' ? '85kW · 220mi' : key === 'laptop' ? '50 TOPS · 4K' : '29" OLED · 680L'}
                 </span>
               </div>
             </button>

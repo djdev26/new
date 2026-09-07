@@ -22,9 +22,6 @@ export function generateAgentResponseDeterministic(
   if (lower.includes('appliance') || lower.includes('appliances') || lower.includes('fridge') || lower.includes('refrigerator') || lower.includes('kitchen')) {
     return `Bringing up our SmartVision Neo Multi-Door AI Refrigerator showroom! It features a 29-inch transparent OLED smart hub with voice grocery tracking and AI Twin Chill cooling. Would you like to inspect the interior cooling zones?`;
   }
-  if (lower.includes('server') || lower.includes('edge') || lower.includes('rack') || lower.includes('datacenter')) {
-    return `Displaying the Neural AI Edge Rack showroom! Engineered with 128 Agora RTN cores and dual vapor-chamber cooling, it handles 4,000 concurrent voice calls at sub-25ms local codec latency.`;
-  }
 
   // 2. Irresistible Closer & Overcoming "I shouldn't buy / Hesitation"
   if (
