@@ -6,7 +6,7 @@ import {
   CheckCircle2,
   Clock,
   Code2,
-  Bike,
+  Car,
   Laptop,
   Refrigerator,
   CreditCard,

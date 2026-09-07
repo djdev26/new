@@ -8,3 +8,6 @@ coverage/
 !.env.example
 .antigravity/
 .vscode/
+*.sqlite
+*.sqlite-journal
+data/*.sqlite

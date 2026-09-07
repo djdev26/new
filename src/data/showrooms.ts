@@ -1,14 +1,16 @@
-﻿import { ShowroomItem, ShowroomId, ShowroomProduct } from '../types/salespilot';
+import { ShowroomItem, ShowroomId, ShowroomProduct } from '../types/salespilot';
 import { LAPTOPS_SHOWROOM } from './showrooms/laptops';
 import { APPLIANCES_SHOWROOM } from './showrooms/appliances';
 import { CARS_SHOWROOM } from './showrooms/cars';
+import { PHONES_SHOWROOM } from './showrooms/phones';
 
-export const SHOWROOM_KEYS: ShowroomId[] = ['laptops', 'appliances', 'cars'];
+export const SHOWROOM_KEYS: ShowroomId[] = ['laptops', 'appliances', 'cars', 'phones'];
 
 export const SHOWROOMS_DATA: Record<ShowroomId, ShowroomItem> = {
   laptops: LAPTOPS_SHOWROOM,
   appliances: APPLIANCES_SHOWROOM,
   cars: CARS_SHOWROOM,
+  phones: PHONES_SHOWROOM,
 };
 
 export function getAllProducts(): ShowroomProduct[] {

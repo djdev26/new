@@ -18,6 +18,14 @@ import { generateNaturalAgentTurn } from './src/server/naturalConversationEngine
 import { productsData, searchKnowledgeBase } from './src/data/knowledge';
 import { CrmLead, CalendarBooking, AnalyticsData } from './src/types/salespilot';
 import { runSalesPilotUnitTests } from './src/server/tests';
+import { conversationOrchestrator } from './src/server/orchestrator/conversationOrchestrator';
+import { customerSessionManager } from './src/server/multiCustomerManager';
+import { mcpToolRegistry } from './src/server/mcp/toolRegistry';
+import { productService } from './src/server/commerce/productService';
+import { storeService } from './src/server/commerce/storeService';
+import { globalCommerceRepository } from './src/server/storage/sqliteRepository';
+import { runComprehensiveTestSuite } from './src/server/tests/comprehensiveTestSuite';
+import { runFullE2ESimulation } from './src/server/tests/e2eSimulation';
 
 dotenv.config();
 
@@ -71,12 +79,14 @@ const bookingsDb: CalendarBooking[] = [
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'SalesPilot AI Core Engine',
+    service: 'SalesPilot AI Master Enterprise Engine',
+    persistence: 'SQLite (node:sqlite)',
+    toolsCount: mcpToolRegistry.getToolDefinitions().length,
     timestamp: new Date().toISOString(),
   });
 });
 
-// 2. Process conversation message (Core Orchestration Endpoint)
+// 2. Process conversation message (Master Core Orchestration Endpoint)
 app.post('/api/conversation/message', async (req, res) => {
   try {
     const {
@@ -101,14 +111,14 @@ app.post('/api/conversation/message', async (req, res) => {
     };
 
     const t0 = Date.now();
+
     // Step 1: Detect Intent & Objections
     const [intentResult, objectionResult] = await Promise.all([
       detectIntent(text),
       detectObjections(text),
     ]);
-    const t1 = Date.now();
 
-    // Step 2: Update Customer State Engine
+    // Step 2: Update Customer State Engine for UI telemetry
     const updatedState = updateCustomerState(
       conversation_id,
       text,
@@ -123,20 +133,17 @@ app.post('/api/conversation/message', async (req, res) => {
     // Step 4: Calculate Dynamic Quote
     const quote = calculateQuote(updatedState.user_count, updatedState.product_interest);
 
-    // Step 5: Natural Conversation & Tone Analysis
-    const turnAnalysis = generateNaturalAgentTurn(text, updatedState, speakerMeta);
-    const t2 = Date.now();
+    // Step 5: Execute Autonomous Orchestrator (Passport + SQLite Memory + MCP Tools + Priority Lock)
+    const activeCust = customerSessionManager.getActiveSession();
+    const targetCustId = activeCust.customerId;
+    const orchResult = await conversationOrchestrator.processTurn(text, targetCustId, speakerName, speakerId);
 
-    // Step 6: Generate AI Agent Response Dialogue
-    const agentResponse = await generateAgentResponse(
-      text,
-      updatedState,
-      intentResult,
-      objectionResult,
-      speakerMeta
-    );
+    // Step 6: Synchronize UI turn analysis
+    const turnAnalysis = generateNaturalAgentTurn(text, updatedState, speakerMeta);
+    turnAnalysis.agentSpeech = orchResult.agentSpeech;
+
     const t3 = Date.now();
-    console.log(`[Turn Latency] Intent/Objection: ${t1 - t0}ms | State/Tone: ${t2 - t1}ms | Response: ${t3 - t2}ms | Total: ${t3 - t0}ms`);
+    console.log(`[Master Turn Latency] ${t3 - t0}ms | Active Cust: ${targetCustId} | Tools Executed: ${orchResult.toolsExecuted.length}`);
 
     res.json({
       state: updatedState,
@@ -144,8 +151,11 @@ app.post('/api/conversation/message', async (req, res) => {
       objections: objectionResult,
       quote,
       action: nextAction,
-      agentResponse: agentResponse || turnAnalysis.agentSpeech,
+      agentResponse: orchResult.agentSpeech,
       analysis: turnAnalysis,
+      passport: orchResult.passport,
+      toolsExecuted: orchResult.toolsExecuted,
+      session: orchResult.session,
     });
   } catch (error: any) {
     console.error('Error processing conversation message:', error);
@@ -153,39 +163,113 @@ app.post('/api/conversation/message', async (req, res) => {
   }
 });
 
-// 3. Multi-Customer Priority & Concurrency Endpoints (Sections 18 & 19)
-import { multiCustomerManager } from './src/server/multiCustomerManager';
-
+// 3. Multi-Customer Priority & Concurrency Endpoints (Sections 6, 18, 19, 31)
 app.get('/api/customers/sessions', (req, res) => {
-  const sessions = multiCustomerManager.getAllSessions();
-  const activeSession = multiCustomerManager.getActiveSession();
+  const sessions = customerSessionManager.getAllSessions();
+  const activeSession = customerSessionManager.getActiveSession();
+  
+  // Format for client UI
+  const uiSessions = sessions.map((s) => ({
+    id: s.customerId,
+    customerId: s.customerId,
+    name: s.name,
+    role: s.role,
+    company: s.company,
+    status: s.status,
+    category: s.category,
+    storeId: s.storeId,
+    state: getCustomerState(s.conversationId),
+    passport: s.passport,
+    createdAt: s.lastInteraction,
+    lastActive: s.lastInteraction,
+    memorySnippet: globalCommerceRepository.getMemoriesByCustomer(s.customerId)[0]?.fact || 'Initial showroom exploration',
+  }));
+
   res.json({
-    activeSessionId: activeSession.id,
-    sessions,
+    activeSessionId: activeSession.customerId,
+    sessions: uiSessions,
   });
 });
 
 app.post('/api/customers/switch-active', (req, res) => {
   const { sessionId } = req.body;
-  const result = multiCustomerManager.setActiveSession(sessionId);
+  const result = customerSessionManager.switchActiveCustomer(sessionId);
   if (!result.success) {
     return res.status(404).json({ error: 'Session not found' });
   }
   res.json(result);
 });
 
-// 4. Customer State Endpoints
+// 4. Customer State, Passport & Memory Endpoints
 app.get('/api/customer/:id', (req, res) => {
   const state = getCustomerState(req.params.id);
   res.json(state);
 });
 
-app.get('/api/customer/:id/memory', (req, res) => {
-  const memory = getCustomerMemory(req.params.id);
-  res.json({ memory });
+app.get('/api/customer/:id/passport', (req, res) => {
+  const session = customerSessionManager.getSession(req.params.id);
+  res.json({ passport: session?.passport || null });
 });
 
-// 4. Pricing & Knowledge Endpoints
+app.get('/api/customer/:id/memory', (req, res) => {
+  const memories = globalCommerceRepository.getMemoriesByCustomer(req.params.id);
+  res.json({ memory: memories.map((m) => m.fact), detailedMemories: memories });
+});
+
+app.post('/api/customer/:id/memory', (req, res) => {
+  const { fact, category = 'preference', confidence = 0.9 } = req.body;
+  const mem = globalCommerceRepository.saveMemory({
+    customerId: req.params.id,
+    fact,
+    category,
+    confidence,
+    source: 'explicit_form',
+    consent: true,
+  });
+  res.json({ success: true, memory: mem });
+});
+
+// 5. MCP Tool Endpoints (Section 20)
+app.get('/api/mcp/tools', (req, res) => {
+  const tools = mcpToolRegistry.getToolDefinitions();
+  res.json({ count: tools.length, tools });
+});
+
+app.post('/api/mcp/execute', async (req, res) => {
+  const { toolName, parameters = {} } = req.body;
+  const result = await mcpToolRegistry.executeTool(toolName, parameters);
+  res.json(result);
+});
+
+// 6. Universal Stores & Showrooms Endpoints (Section 3, 19)
+app.get('/api/stores', (req, res) => {
+  const stores = storeService.getAllStores();
+  res.json({ stores });
+});
+
+app.post('/api/stores/switch', async (req, res) => {
+  const { storeId, category } = req.body;
+  const result = await mcpToolRegistry.executeTool('switch_store', { storeId, category });
+  res.json(result);
+});
+
+// 7. Dynamic Product Comparison & Recommendation Endpoints (Section 16, 17, 18)
+app.post('/api/products/compare', async (req, res) => {
+  const { productIds, customerId } = req.body;
+  const session = customerId ? customerSessionManager.getSession(customerId) : undefined;
+  const ids = Array.isArray(productIds) ? productIds : String(productIds).split(',');
+  const comparison = productService.compare(ids, session?.passport);
+  res.json({ comparison });
+});
+
+app.post('/api/products/recommend', (req, res) => {
+  const { category, customerId, budget, limit = 3 } = req.body;
+  const session = customerId ? customerSessionManager.getSession(customerId) : undefined;
+  const recs = productService.recommend(session?.passport || (budget ? { budget: { max: budget, currency: 'INR', isStrict: false, flexibilityPercentage: 10 } } : {}), category, limit);
+  res.json(recs);
+});
+
+// 8. Pricing & Knowledge Endpoints
 app.post('/api/quote/calculate', (req, res) => {
   const { user_count = 50, plan, requirements } = req.body;
   const quote = calculateQuote(Number(user_count), plan, requirements);
@@ -199,17 +283,17 @@ app.post('/api/knowledge/search', (req, res) => {
 });
 
 app.get('/api/products', (req, res) => {
-  res.json({ products: productsData });
+  const products = productService.getAll();
+  res.json({ products });
 });
 
-// 5. Agora Real-Time Voice Token Endpoint
+// 9. Agora Real-Time Voice Token Endpoint
 app.post('/api/agora/token', (req, res) => {
   const { channelName = 'salespilot-room-1', uid = 1001 } = req.body;
   const agoraAppId = process.env.AGORA_APP_ID;
   const agoraCertificate = process.env.AGORA_APP_CERTIFICATE;
 
   if (agoraAppId && agoraCertificate && agoraAppId !== 'YOUR_AGORA_APP_ID') {
-    // In production with credentials, generate RTC token
     res.json({
       mode: 'live',
       appId: agoraAppId,
@@ -219,7 +303,6 @@ app.post('/api/agora/token', (req, res) => {
       isDemo: false,
     });
   } else {
-    // Demo mode: Return fallback adapter credentials with exact same interface
     res.json({
       mode: 'demo',
       appId: 'demo-salespilot-agora-id',
@@ -232,7 +315,7 @@ app.post('/api/agora/token', (req, res) => {
   }
 });
 
-// 6. CRM & Calendar Endpoints
+// 10. CRM & Calendar Endpoints
 app.post('/api/crm/lead', (req, res) => {
   const {
     name = 'Priya Sharma',
@@ -290,67 +373,95 @@ app.post('/api/calendar/book', (req, res) => {
   res.json({ success: true, booking: newBooking });
 });
 
+// 11. Specialist Escalation Endpoint (Section 14 & 23)
 app.post('/api/escalate', (req, res) => {
-  const { conversation_id = 'default-session', reason = 'Customer requested human assistance' } = req.body;
-  setCustomerStage(conversation_id, 'Negotiation');
+  const { customerId = 'cust-priya', reason = 'Customer requested senior specialist consultation' } = req.body;
+  const cust = globalCommerceRepository.getCustomerById(customerId);
+  const memories = globalCommerceRepository.getMemoriesByCustomer(customerId);
+  const session = customerSessionManager.getSession(customerId);
+
+  const ticket = globalCommerceRepository.createTicket(customerId, session?.conversationId || `conv-${customerId}`, reason, {
+    customer: cust,
+    memories,
+    passport: session?.passport,
+    transcript: session?.transcript,
+  });
+
   res.json({
     success: true,
-    message: 'Transferred to Senior Account Director queue with live context.',
-    ticketId: `ESC-${Date.now().toString().slice(-6)}`,
+    message: 'Transferred with full context snapshot to Senior Specialist queue.',
+    ticketId: ticket.id,
+    ticket,
   });
 });
 
-// 7. Analytics Data
+// 12. Analytics Data
 app.get('/api/analytics', (req, res) => {
   const analytics: AnalyticsData = {
-    totalConversations: 142,
-    qualifiedLeads: 89,
-    avgLeadScore: 76.4,
-    demosBooked: 38,
-    conversionRate: 26.8,
-    escalationsCount: 11,
-    avgDurationMinutes: 4.8,
+    totalConversations: 184,
+    qualifiedLeads: 122,
+    avgLeadScore: 81.2,
+    demosBooked: 54,
+    conversionRate: 29.4,
+    escalationsCount: 14,
+    avgDurationMinutes: 4.2,
     objectionsBreakdown: [
-      { name: 'Pricing & Budget', count: 52, percentage: 38 },
-      { name: 'Competitor X', count: 34, percentage: 25 },
-      { name: 'Implementation Timeline', count: 26, percentage: 19 },
-      { name: 'Security & Compliance', count: 16, percentage: 12 },
-      { name: 'Feature Gap', count: 8, percentage: 6 },
+      { name: 'Pricing & Concessions', count: 58, percentage: 35 },
+      { name: 'Weight & Ergonomics', count: 42, percentage: 26 },
+      { name: 'Battery Runtime', count: 32, percentage: 19 },
+      { name: 'Warranty & Financing', count: 20, percentage: 12 },
+      { name: 'Delivery SLA', count: 12, percentage: 8 },
     ],
     competitorMentions: [
       { name: 'Competitor X', count: 48 },
-      { name: 'Legacy IVR Vendor', count: 28 },
-      { name: 'In-House Bot', count: 18 },
+      { name: 'Legacy Brands', count: 32 },
+      { name: 'Direct Import', count: 18 },
       { name: 'Other', count: 9 },
     ],
     scoreDistribution: [
-      { range: '0-40 (Low)', count: 14 },
-      { range: '41-60 (Moderate)', count: 39 },
-      { range: '61-80 (Qualified)', count: 56 },
-      { range: '81-100 (High Ready)', count: 33 },
+      { range: '0-40 (Low)', count: 10 },
+      { range: '41-60 (Moderate)', count: 32 },
+      { range: '61-80 (Qualified)', count: 74 },
+      { range: '81-100 (Ready to Buy)', count: 68 },
     ],
     stageConversionFunnel: [
-      { stage: 'New Lead', count: 142 },
-      { stage: 'Engaged', count: 118 },
-      { stage: 'Qualified', count: 89 },
-      { stage: 'Demo Requested', count: 54 },
-      { stage: 'Demo Booked', count: 38 },
-      { stage: 'Converted', count: 24 },
+      { stage: 'New Lead', count: 184 },
+      { stage: 'Engaged', count: 162 },
+      { stage: 'Qualified', count: 122 },
+      { stage: 'Demo Requested', count: 78 },
+      { stage: 'Demo Booked', count: 54 },
+      { stage: 'Converted', count: 39 },
     ],
   };
   res.json(analytics);
 });
 
-// 8. Unit Tests Verification Endpoint (Role 1 Deliverable 5)
+// 13. Comprehensive Automated Tests & E2E Simulation Verification Endpoints
 app.get('/api/tests/run', (req, res) => {
-  const results = runSalesPilotUnitTests();
-  const allPassed = results.every((r) => r.passed);
+  const legacyResults = runSalesPilotUnitTests();
+  const allPassed = legacyResults.every((r) => r.passed);
   res.json({
     success: allPassed,
-    total: results.length,
-    passed: results.filter((r) => r.passed).length,
-    results,
+    total: legacyResults.length,
+    passed: legacyResults.filter((r) => r.passed).length,
+    results: legacyResults,
   });
+});
+
+app.get('/api/tests/comprehensive', async (req, res) => {
+  const suites = await runComprehensiveTestSuite();
+  const allPassed = suites.every((s) => s.passed);
+  res.json({
+    success: allPassed,
+    totalSuites: suites.length,
+    passedSuites: suites.filter((s) => s.passed).length,
+    suites,
+  });
+});
+
+app.get('/api/tests/e2e', async (req, res) => {
+  const e2eResult = await runFullE2ESimulation();
+  res.json(e2eResult);
 });
 
 // Start server with Vite middleware in development or static dist in production

@@ -1,10 +1,11 @@
-﻿import React from 'react';
+import React from 'react';
 import { ShowroomId } from '../types/salespilot';
 import { SHOWROOMS_DATA, SHOWROOM_KEYS } from '../data/showrooms';
 import {
   Laptop,
   Refrigerator,
   Car,
+  Smartphone,
   Sparkles,
   Zap,
   Mic,
@@ -32,6 +33,8 @@ export const ShowroomDrawer: React.FC<ShowroomDrawerProps> = ({
         return <Car className="h-4 w-4" />;
       case 'laptops':
         return <Laptop className="h-4 w-4" />;
+      case 'phones':
+        return <Smartphone className="h-4 w-4" />;
       case 'appliances':
       default:
         return <Refrigerator className="h-4 w-4" />;
@@ -51,7 +54,7 @@ export const ShowroomDrawer: React.FC<ShowroomDrawerProps> = ({
               Autonomous 3D Showroom Navigator
             </h3>
             <span className="text-[11px] text-slate-500 font-medium">
-              3 Dedicated Showrooms · Voice-controlled product switching & live 3D hardware inspection
+              4 Dedicated Showrooms · Voice-controlled product switching & live 3D hardware inspection
             </span>
           </div>
         </div>

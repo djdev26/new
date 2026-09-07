@@ -257,8 +257,10 @@ export const ShowroomCanvas3D: React.FC<ShowroomCanvas3DProps> = ({
         buildSportsCar(modelGroup, accentColor, wireframeMode);
         break;
       case 'laptops':
-      case 'laptop':
         buildNeuralLaptop(modelGroup, accentColor, wireframeMode);
+        break;
+      case 'phones':
+        buildTitaniumSmartphone(modelGroup, accentColor, wireframeMode);
         break;
       case 'appliances':
       default:
@@ -823,6 +825,96 @@ export const ShowroomCanvas3D: React.FC<ShowroomCanvas3DProps> = ({
       fanList.push(bladeMesh);
     });
     dynamicMeshesRef.current.fans = fanList;
+  };
+
+  // Model Builder 5: Titanium Smartphone (Flagship 6.9" Pro Device)
+  const buildTitaniumSmartphone = (group: THREE.Group, accentColor: THREE.Color, wireframe: boolean) => {
+    // Phone Chassis (Grade 5 Titanium rounded slab)
+    const phoneGeo = new THREE.BoxGeometry(1.2, 2.4, 0.12);
+    const phoneMat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      metalness: 0.95,
+      roughness: 0.2,
+      wireframe,
+    });
+    const phoneBody = new THREE.Mesh(phoneGeo, phoneMat);
+    group.add(phoneBody);
+
+    // Front OLED Display with high gloss
+    const screenGeo = new THREE.PlaneGeometry(1.12, 2.32);
+    const screenMat = new THREE.MeshStandardMaterial({
+      color: 0x050b14,
+      metalness: 0.8,
+      roughness: 0.05,
+      emissive: accentColor,
+      emissiveIntensity: 0.25,
+      wireframe,
+    });
+    const screen = new THREE.Mesh(screenGeo, screenMat);
+    screen.position.z = 0.065;
+    group.add(screen);
+    dynamicMeshesRef.current.screenMesh = screen;
+
+    // Dynamic Island Pill / Camera Cutout
+    const pillGeo = new THREE.BoxGeometry(0.26, 0.06, 0.02);
+    const pillMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const pill = new THREE.Mesh(pillGeo, pillMat);
+    pill.position.set(0, 0.98, 0.07);
+    group.add(pill);
+
+    // Rear Camera Bump (Square plateau with glass bevel)
+    const bumpGeo = new THREE.BoxGeometry(0.55, 0.55, 0.06);
+    const bumpMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      metalness: 0.9,
+      roughness: 0.15,
+      wireframe,
+    });
+    const bump = new THREE.Mesh(bumpGeo, bumpMat);
+    bump.position.set(-0.25, 0.8, -0.09);
+    group.add(bump);
+
+    // 3 Triple Pro Camera Lenses
+    const lensPositions: [number, number][] = [
+      [-0.35, 0.92],
+      [-0.35, 0.68],
+      [-0.15, 0.8],
+    ];
+
+    lensPositions.forEach(([lx, ly]) => {
+      // Outer lens ring
+      const ringGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.04, 24);
+      const ringMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 1.0, roughness: 0.1 });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(lx, ly, -0.13);
+      group.add(ring);
+
+      // Inner optics glass
+      const glassGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.042, 24);
+      const glassMat = new THREE.MeshStandardMaterial({
+        color: 0x0f172a,
+        metalness: 0.9,
+        roughness: 0.05,
+        emissive: accentColor,
+        emissiveIntensity: 0.2,
+      });
+      const glass = new THREE.Mesh(glassGeo, glassMat);
+      glass.rotation.x = Math.PI / 2;
+      glass.position.set(lx, ly, -0.131);
+      group.add(glass);
+    });
+
+    // Titanium Action & Volume buttons
+    const buttonGeo = new THREE.BoxGeometry(0.04, 0.18, 0.06);
+    const buttonMat = new THREE.MeshStandardMaterial({ color: accentColor, metalness: 0.9 });
+    const actionBtn = new THREE.Mesh(buttonGeo, buttonMat);
+    actionBtn.position.set(-0.62, 0.6, 0);
+    group.add(actionBtn);
+
+    const powerBtn = new THREE.Mesh(buttonGeo, buttonMat);
+    powerBtn.position.set(0.62, 0.4, 0);
+    group.add(powerBtn);
   };
 
   const handleHotspotClick = (hotspot: ShowroomHotspot) => {

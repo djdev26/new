@@ -1,4 +1,4 @@
-﻿import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 
 // Initially trip circuit breaker for known exhausted free-tier key
 // Can be reset if user supplies a new valid key
@@ -57,4 +57,17 @@ export async function executeWithTimeout<T>(
     reportGeminiFailure(err);
     throw err;
   }
+}
+
+export async function callGemini(prompt: string, timeoutMs: number = 3000): Promise<string> {
+  return executeWithTimeout(async () => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('No GEMINI_API_KEY configured');
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    return response.text || '';
+  }, timeoutMs);
 }

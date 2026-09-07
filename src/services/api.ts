@@ -137,6 +137,12 @@ export const apiService = {
     return res.json();
   },
 
+  async getAnalytics(): Promise<AnalyticsData> {
+    const res = await fetch('/api/analytics');
+    if (!res.ok) throw new Error('Failed to fetch analytics');
+    return res.json();
+  },
+
   async switchActiveSession(sessionId: string): Promise<{ success: boolean; session?: any; resumePrompt?: string }> {
     const res = await fetch('/api/customers/switch-active', {
       method: 'POST',
