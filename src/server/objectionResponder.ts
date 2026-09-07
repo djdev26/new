@@ -3,6 +3,7 @@ import { CustomerState, IntentResult, ObjectionResult } from '../types/salespilo
 import { searchKnowledgeBase } from '../data/knowledge';
 import { calculateQuote } from './pricingEngine';
 import { generateNaturalAgentTurn, SpeakerTurnMeta } from './naturalConversationEngine';
+import { isGeminiAvailable, executeWithTimeout } from './geminiClient';
 
 export function generateAgentResponseDeterministic(
   utterance: string,
@@ -23,7 +24,7 @@ export async function generateAgentResponse(
   meta?: SpeakerTurnMeta
 ): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || !isGeminiAvailable()) {
     return generateAgentResponseDeterministic(utterance, state, intentResult, objectionResult, meta);
   }
 
@@ -48,15 +49,17 @@ Customer Utterance: "${utterance}"
 
 Keep response under 3-4 natural conversational spoken sentences suitable for instant voice synthesis.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-    });
+    const response = await executeWithTimeout(() =>
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+      })
+    );
 
     const text = response.text?.trim();
     if (text) return text;
   } catch (err) {
-    console.warn('Gemini response fallback triggered:', err);
+    // Gracefully fallback to deterministic without delay
   }
 
   return generateAgentResponseDeterministic(utterance, state, intentResult, objectionResult, meta);

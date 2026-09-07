@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { IntentResult, SentimentType, BuyingSignal, UrgencyLevel } from '../types/salespilot';
+import { isGeminiAvailable, executeWithTimeout } from './geminiClient';
 
 // Fallback rule-based intent detection engine
 export function detectIntentDeterministic(turn: string, history: string[] = []): IntentResult {
@@ -90,7 +91,7 @@ export function detectIntentDeterministic(turn: string, history: string[] = []):
  */
 export async function detectIntent(turn: string, history: string[] = []): Promise<IntentResult> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || !isGeminiAvailable()) {
     return detectIntentDeterministic(turn, history);
   }
 
@@ -110,13 +111,15 @@ Respond ONLY with a valid JSON object strictly matching this TypeScript interfac
   "urgency": "low" | "medium" | "high"
 }`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
+    const response = await executeWithTimeout(() =>
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        },
+      })
+    );
 
     const parsed = JSON.parse(response.text || '{}');
     if (parsed.detected_intent && parsed.sentiment) {
@@ -130,7 +133,7 @@ Respond ONLY with a valid JSON object strictly matching this TypeScript interfac
       };
     }
   } catch (error) {
-    console.warn('LLM Intent detection fallback triggered:', error);
+    // Graceful fallback without delay
   }
 
   return detectIntentDeterministic(turn, history);

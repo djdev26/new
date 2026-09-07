@@ -42,6 +42,12 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
 
         stopTTS();
 
+        try {
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
+        } catch (_) {}
+
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 1.05;
         utterance.pitch = 1.0;
@@ -63,11 +69,23 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
         setCallState('speaking');
         setStatusMessage('AI is speaking...');
 
+        // Safety timer to prevent unhandled hang in background tab or browser quirks
+        const timeoutMs = Math.max(4000, Math.min(25000, text.length * 80));
+        const safetyTimer = setTimeout(() => {
+          if (isSpeakingAIRef.current) {
+            isSpeakingAIRef.current = false;
+            setCallState('listening');
+            setStatusMessage('Listening to customer...');
+            resolve(true);
+          }
+        }, timeoutMs);
+
         utterance.onstart = () => {
           isSpeakingAIRef.current = true;
         };
 
         utterance.onend = () => {
+          clearTimeout(safetyTimer);
           if (isSpeakingAIRef.current) {
             isSpeakingAIRef.current = false;
             setCallState('listening');
@@ -76,13 +94,21 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
           }
         };
 
-        utterance.onerror = (e) => {
-          // If cancelled due to customer interruption, handled separately
+        utterance.onerror = () => {
+          clearTimeout(safetyTimer);
           isSpeakingAIRef.current = false;
+          setCallState('listening');
+          setStatusMessage('Listening to customer...');
           resolve(false);
         };
 
-        window.speechSynthesis.speak(utterance);
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          clearTimeout(safetyTimer);
+          isSpeakingAIRef.current = false;
+          resolve(false);
+        }
       });
     },
     [stopTTS]

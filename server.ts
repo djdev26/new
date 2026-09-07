@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import { detectIntent } from './src/server/intentDetector';
@@ -13,6 +14,7 @@ import {
 import { calculateQuote } from './src/server/pricingEngine';
 import { determineNextBestAction } from './src/server/nextBestActionEngine';
 import { generateAgentResponse } from './src/server/objectionResponder';
+import { generateNaturalAgentTurn } from './src/server/naturalConversationEngine';
 import { productsData, searchKnowledgeBase } from './src/data/knowledge';
 import { CrmLead, CalendarBooking, AnalyticsData } from './src/types/salespilot';
 import { runSalesPilotUnitTests } from './src/server/tests';
@@ -20,7 +22,7 @@ import { runSalesPilotUnitTests } from './src/server/tests';
 dotenv.config();
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 3001;
 
 app.use(express.json());
 
@@ -98,11 +100,13 @@ app.post('/api/conversation/message', async (req, res) => {
       activeSpeakerName,
     };
 
+    const t0 = Date.now();
     // Step 1: Detect Intent & Objections
     const [intentResult, objectionResult] = await Promise.all([
       detectIntent(text),
       detectObjections(text),
     ]);
+    const t1 = Date.now();
 
     // Step 2: Update Customer State Engine
     const updatedState = updateCustomerState(
@@ -120,8 +124,8 @@ app.post('/api/conversation/message', async (req, res) => {
     const quote = calculateQuote(updatedState.user_count, updatedState.product_interest);
 
     // Step 5: Natural Conversation & Tone Analysis
-    const { generateNaturalAgentTurn } = await import('./src/server/naturalConversationEngine');
     const turnAnalysis = generateNaturalAgentTurn(text, updatedState, speakerMeta);
+    const t2 = Date.now();
 
     // Step 6: Generate AI Agent Response Dialogue
     const agentResponse = await generateAgentResponse(
@@ -131,6 +135,8 @@ app.post('/api/conversation/message', async (req, res) => {
       objectionResult,
       speakerMeta
     );
+    const t3 = Date.now();
+    console.log(`[Turn Latency] Intent/Objection: ${t1 - t0}ms | State/Tone: ${t2 - t1}ms | Response: ${t3 - t2}ms | Total: ${t3 - t0}ms`);
 
     res.json({
       state: updatedState,
@@ -347,37 +353,66 @@ app.get('/api/tests/run', (req, res) => {
   });
 });
 
-// Start server with Vite middleware in development
-async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
+// Start server with Vite middleware in development or static dist in production
+function tryListen(targetPort: number, maxRetries = 10): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = app.listen(targetPort, '0.0.0.0', () => {
+      resolve(targetPort);
     });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    srv.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        srv.close();
+        if (maxRetries > 0) {
+          console.warn(`Port ${targetPort} is in use, trying port ${targetPort + 1}...`);
+          resolve(tryListen(targetPort + 1, maxRetries - 1));
+        } else {
+          reject(new Error(`Could not find an available port after 10 attempts`));
+        }
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
+
+async function startServer() {
+  const distPath = path.join(process.cwd(), 'dist');
+  const hasDist = fs.existsSync(path.join(distPath, 'index.html'));
+  const isProduction = process.env.NODE_ENV === 'production' || !fs.existsSync(path.join(process.cwd(), 'src'));
+
+  if (isProduction && hasDist) {
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
+  } else {
+    try {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+    } catch (err) {
+      if (hasDist) {
+        console.warn('Falling back to pre-built dist assets...');
+        app.use(express.static(distPath));
+        app.get('*', (req, res) => {
+          res.sendFile(path.join(distPath, 'index.html'));
+        });
+      } else {
+        throw err;
+      }
+    }
   }
 
-  const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`SalesPilot AI Server running on http://localhost:${PORT}`);
-  });
-
-  server.on('error', (err: any) => {
-    if (err.code === 'EADDRINUSE') {
-      const altPort = PORT + 1;
-      console.warn(`Port ${PORT} in use, automatically trying ${altPort}...`);
-      app.listen(altPort, '0.0.0.0', () => {
-        console.log(`SalesPilot AI Server running on http://localhost:${altPort}`);
-      });
-    } else {
-      console.error('Server error:', err);
-    }
-  });
+  try {
+    const activePort = await tryListen(PORT);
+    console.log(`\n======================================================`);
+    console.log(`🚀 SalesPilot AI Server Live at: http://localhost:${activePort}`);
+    console.log(`======================================================\n`);
+  } catch (err) {
+    console.error('Failed to start server:', err);
+  }
 }
 
 startServer();

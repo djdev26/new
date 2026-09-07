@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { ObjectionResult, ObjectionType } from '../types/salespilot';
+import { isGeminiAvailable, executeWithTimeout } from './geminiClient';
 
 export function detectObjectionsDeterministic(turn: string): ObjectionResult {
   const lower = turn.toLowerCase();
@@ -93,7 +94,7 @@ export function detectObjectionsDeterministic(turn: string): ObjectionResult {
 
 export async function detectObjections(turn: string): Promise<ObjectionResult> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || !isGeminiAvailable()) {
     return detectObjectionsDeterministic(turn);
   }
 
@@ -114,20 +115,22 @@ Return ONLY JSON:
   ]
 }`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
+    const response = await executeWithTimeout(() =>
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        },
+      })
+    );
 
     const parsed = JSON.parse(response.text || '{}');
     if (Array.isArray(parsed.objections)) {
       return parsed;
     }
   } catch (error) {
-    console.warn('LLM Objection detection fallback triggered:', error);
+    // Graceful fallback without delay
   }
 
   return detectObjectionsDeterministic(turn);
