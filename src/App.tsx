@@ -395,15 +395,6 @@ export default function App() {
     }
   }, []);
 
-  // Simulate Multi-Customer Interruption (Polite Deferral)
-  const handleSimulateInterruption = useCallback(
-    async (interrupterName: string, utteranceText: string) => {
-      showToast(`Interruption incoming from secondary customer: ${interrupterName}`);
-      await voice.processCustomerUtterance(utteranceText, false, interrupterName);
-    },
-    [voice]
-  );
-
   // Handler when customer speaks or sends utterance
   const handleProcessUtterance = useCallback(
     async (text: string, speakerName?: string): Promise<string | void> => {
@@ -530,6 +521,15 @@ export default function App() {
     onInterruption: handleInterruption,
     conversationId,
   });
+
+  // Simulate Multi-Customer Interruption (Polite Deferral)
+  const handleSimulateInterruption = useCallback(
+    async (interrupterName: string, utteranceText: string) => {
+      showToast(`Interruption incoming from secondary customer: ${interrupterName}`);
+      await voice.processCustomerUtterance(utteranceText, false, interrupterName);
+    },
+    [voice]
+  );
 
   // Action Buttons from Next-Best-Action panel
   const handleBookDemo = () => setIsCalendarModalOpen(true);
