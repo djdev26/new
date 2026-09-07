@@ -1,4 +1,4 @@
-﻿import { CustomerState, IntentResult, ObjectionResult, ShowroomId } from '../types/salespilot';
+import { CustomerState, IntentResult, ObjectionResult, ShowroomId } from '../types/salespilot';
 import { SHOWROOMS_DATA, getAllProducts, searchProducts } from '../data/showrooms';
 
 export type UserTone = 'skeptical_reluctant' | 'casual_chill' | 'analytical_tech' | 'hurried_direct' | 'enthusiastic' | 'neutral';
@@ -116,26 +116,16 @@ export function resolveTargetEntities(text: string): {
     }
     // Specific model aliases
     if (
-      (p.id === 'car-1' && (lower.includes('carrera') || lower.includes('911 carrera'))) ||
-      (p.id === 'car-2' && (lower.includes('gts') || lower.includes('carrera 4 gts') || lower.includes('t-hybrid'))) ||
-      (p.id === 'car-3' && (lower.includes('turbo s') || lower.includes('911 turbo'))) ||
-      (p.id === 'car-4' && (lower.includes('range rover') || lower.includes('sv'))) ||
-      (p.id === 'car-5' && (lower.includes('bmw') || lower.includes('x5'))) ||
-      (p.id === 'car-6' && (lower.includes('mercedes') || lower.includes('gle'))) ||
-      (p.id === 'car-7' && (lower.includes('land cruiser') || lower.includes('lc300'))) ||
-      (p.id === 'car-8' && (lower.includes('nexon') || lower.includes('tata ev'))) ||
-      (p.id === 'car-9' && (lower.includes('thar') || lower.includes('roxx'))) ||
-      (p.id === 'car-10' && (lower.includes('xuv') || lower.includes('xuv700'))) ||
-      (p.id === 'laptop-1' && lower.includes('xps 16') && !lower.includes('9640')) ||
-      (p.id === 'laptop-2' && (lower.includes('9640') || lower.includes('xps 16 4k'))) ||
-      (p.id === 'laptop-3' && (lower.includes('macbook') || lower.includes('m3 max') || lower.includes('m4 max') || lower.includes('apple'))) ||
-      (p.id === 'laptop-4' && (lower.includes('zephyrus') || lower.includes('g14') || lower.includes('asus'))) ||
-      (p.id === 'laptop-5' && (lower.includes('thinkpad') || lower.includes('carbon') || lower.includes('lenovo'))) ||
-      (p.id === 'laptop-6' && (lower.includes('spectre') || lower.includes('hp'))) ||
-      (p.id === 'laptop-7' && (lower.includes('razer') || lower.includes('blade 16'))) ||
-      (p.id === 'laptop-8' && (lower.includes('surface') || lower.includes('copilot'))) ||
-      (p.id === 'laptop-9' && (lower.includes('predator') || lower.includes('helios'))) ||
-      (p.id === 'laptop-10' && (lower.includes('alienware') || lower.includes('m16'))) ||
+      (p.id === 'sports-1' && (lower.includes('apex') || lower.includes('cyber-pulse') || lower.includes('veloce') || lower.includes('electric bike') || lower.includes('superbike'))) ||
+      (p.id === 'sports-2' && (lower.includes('panigale') || lower.includes('ducati') || lower.includes('v4 s'))) ||
+      (p.id === 'sports-3' && (lower.includes('tarmac') || lower.includes('specialized') || lower.includes('sl8'))) ||
+      (p.id === 'sports-4' && (lower.includes('peloton') || lower.includes('bike+') || lower.includes('studio cycle'))) ||
+      (p.id === 'sports-5' && (lower.includes('concept2') || lower.includes('rowerg') || lower.includes('rower') || lower.includes('rowing'))) ||
+      (p.id === 'sports-6' && (lower.includes('kickr') || lower.includes('wahoo') || lower.includes('indoor trainer'))) ||
+      (p.id === 'sports-7' && (lower.includes('madone') || lower.includes('trek') || lower.includes('aero road bike'))) ||
+      (p.id === 'sports-8' && (lower.includes('cervelo') || lower.includes('cervélo') || lower.includes('p5') || lower.includes('triathlon'))) ||
+      (p.id === 'sports-9' && (lower.includes('bowflex') || lower.includes('selecttech') || lower.includes('dumbbell'))) ||
+      (p.id === 'sports-10' && (lower.includes('garmin') || lower.includes('forerunner') || lower.includes('965') || lower.includes('smartwatch'))) ||
       (p.id === 'appliance-1' && (lower.includes('instaview') || lower.includes('lg fridge'))) ||
       (p.id === 'appliance-2' && lower.includes('bespoke 467')) ||
       (p.id === 'appliance-3' && (lower.includes('family hub') || lower.includes('bespoke 653'))) ||
@@ -151,30 +141,22 @@ export function resolveTargetEntities(text: string): {
     }
   }
 
-  // Showroom level resolution
+  // Showroom level resolution (strictly Sports and Appliances)
   if (
-    lower.includes('car') ||
-    lower.includes('cars') ||
-    lower.includes('porsche') ||
-    lower.includes('suv') ||
-    lower.includes('vehicle') ||
-    lower.includes('auto') ||
-    lower.includes('motor') ||
-    lower.includes('drive')
+    lower.includes('sport') ||
+    lower.includes('sports') ||
+    lower.includes('bike') ||
+    lower.includes('bikes') ||
+    lower.includes('superbike') ||
+    lower.includes('cycle') ||
+    lower.includes('cycling') ||
+    lower.includes('fitness') ||
+    lower.includes('gym') ||
+    lower.includes('rower') ||
+    lower.includes('trainer') ||
+    lower.includes('mobility')
   ) {
-    return { showroomId: 'cars' };
-  }
-
-  if (
-    lower.includes('laptop') ||
-    lower.includes('laptops') ||
-    lower.includes('computer') ||
-    lower.includes('pc') ||
-    lower.includes('workstation') ||
-    lower.includes('macbook') ||
-    lower.includes('notebook')
-  ) {
-    return { showroomId: 'laptops' };
+    return { showroomId: 'sports' };
   }
 
   if (
@@ -186,7 +168,8 @@ export function resolveTargetEntities(text: string): {
     lower.includes('washing') ||
     lower.includes('washer') ||
     lower.includes('ac') ||
-    lower.includes('purifier')
+    lower.includes('purifier') ||
+    lower.includes('dishwasher')
   ) {
     return { showroomId: 'appliances' };
   }
@@ -290,7 +273,7 @@ You literally have nothing to lose and everything to gain. Look at the price dro
     return {
       detectedTone: tone,
       isMultiSpeakerInterruption: false,
-      agentSpeech: `Hey, doing great! I'm your autonomous showroom pilot. You can tell me to jump between supercars, neural laptops, or smart home tech, test drive the 3D models, or hammer out a killer deal. What are you in the mood to check out today?`,
+      agentSpeech: `Hey, doing great! I'm your autonomous showroom pilot. You can tell me to jump between performance sports mobility and smart home tech, test ride the 3D electric superbike or inspect smart appliances, or hammer out a killer deal. What are you in the mood to check out today?`,
     };
   }
 
@@ -298,6 +281,6 @@ You literally have nothing to lose and everything to gain. Look at the price dro
   return {
     detectedTone: tone,
     isMultiSpeakerInterruption: false,
-    agentSpeech: `I hear you completely, ${customerName}. Everything on this site is under autonomous voice control—I can pull up any of our 30 models in 3D, compare benchmarks side-by-side, or customize your configuration on the fly. Where should we head next?`,
+    agentSpeech: `I hear you completely, ${customerName}. Everything on this site is under autonomous voice control—I can pull up our sports and appliance models in 3D, compare benchmarks side-by-side, or customize your configuration on the fly. Where should we head next?`,
   };
 }

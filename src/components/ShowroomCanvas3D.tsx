@@ -253,14 +253,8 @@ export const ShowroomCanvas3D: React.FC<ShowroomCanvas3DProps> = ({
     const accentColor = new THREE.Color(showroom.accentColor);
 
     switch (showroom.id) {
-      case 'cars':
-        buildSportsCar(modelGroup, accentColor, wireframeMode);
-        break;
-      case 'laptops':
-        buildNeuralLaptop(modelGroup, accentColor, wireframeMode);
-        break;
-      case 'phones':
-        buildTitaniumSmartphone(modelGroup, accentColor, wireframeMode);
+      case 'sports':
+        buildElectricBike(modelGroup, accentColor, wireframeMode);
         break;
       case 'appliances':
       default:
@@ -1014,7 +1008,7 @@ export const ShowroomCanvas3D: React.FC<ShowroomCanvas3DProps> = ({
         ) : (
           <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
             <Info className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-            <span>Click any hotspot above or tell the AI: <strong className="text-slate-800">"Switch to cars showroom"</strong> or <strong className="text-slate-800">"Can I get a discount on 10 laptops?"</strong></span>
+            <span>Click any hotspot above or tell the AI: <strong className="text-slate-800">"Switch to appliances showroom"</strong> or <strong className="text-slate-800">"Can I get a discount on 2 superbikes?"</strong></span>
           </div>
         )}
 

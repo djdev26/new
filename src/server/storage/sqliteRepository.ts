@@ -12,6 +12,7 @@ export type MemoryCategory =
   | 'dislike'
   | 'decision'
   | 'objection'
+  | 'identity'
   | 'general';
 
 export interface PersistentMemoryItem {

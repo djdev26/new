@@ -18,7 +18,7 @@ export async function runComprehensiveTestSuite(): Promise<SuiteTestResult[]> {
 
   // Suite 1: Natural Conversation & Tone Adaptation
   try {
-    const res = await conversationOrchestrator.processTurn('Hey bro, which laptop is beast for coding?', 'cust-priya');
+    const res = await conversationOrchestrator.processTurn('Hey bro, which electric superbike is fastest on track?', 'cust-priya');
     const passed = res.agentSpeech.length > 10 && !res.agentSpeech.toLowerCase().includes('certainly');
     results.push({
       suiteId: 1,
@@ -60,7 +60,7 @@ export async function runComprehensiveTestSuite(): Promise<SuiteTestResult[]> {
   // Suite 4: Multiple Customer Concurrency & Priority Lock
   try {
     // Current active is Priya. Rahul speaks:
-    const arbitrate = customerSessionManager.arbitrateTurn('Rahul Verma', 'spk-rahul', 'Can you show me the BMW?');
+    const arbitrate = customerSessionManager.arbitrateTurn('Rahul Verma', 'spk-rahul', 'Can you show me the Ducati superbike?');
     const passed = !arbitrate.isActiveCustomer && arbitrate.deferralSpeech !== undefined && arbitrate.deferralSpeech.includes('Rahul');
     results.push({
       suiteId: 4,
@@ -76,14 +76,14 @@ export async function runComprehensiveTestSuite(): Promise<SuiteTestResult[]> {
   try {
     const mem = globalCommerceRepository.saveMemory({
       customerId: 'cust-test-suite',
-      fact: 'Prefers OLED displays over IPS panels',
+      fact: 'Prefers carbon-monocoque frame over steel trellis',
       category: 'preference',
       confidence: 0.98,
       source: 'customer_utterance',
       consent: true,
     });
     const retrieved = globalCommerceRepository.getMemoriesByCustomer('cust-test-suite', 'preference');
-    const passed = retrieved.some((m) => m.fact.includes('OLED displays'));
+    const passed = retrieved.some((m) => m.fact.includes('carbon-monocoque'));
     results.push({
       suiteId: 5,
       suiteName: 'Persistent Tiered Customer Memory (SQLite)',
@@ -96,8 +96,8 @@ export async function runComprehensiveTestSuite(): Promise<SuiteTestResult[]> {
 
   // Suite 6: Customer Profile Discovery & Fact Extraction
   try {
-    const turn = await conversationOrchestrator.processTurn('My budget is around 2 lakh and I hate heavy laptops', 'cust-priya');
-    const hasBudget = turn.passport.budget.max === 200000;
+    const turn = await conversationOrchestrator.processTurn('My budget is around 5 lakh and I hate heavy frames', 'cust-priya');
+    const hasBudget = turn.passport.budget.max === 500000;
     const hasDislike = turn.passport.dislikes.some((d) => d.toLowerCase().includes('heavy'));
     results.push({
       suiteId: 6,
@@ -111,12 +111,12 @@ export async function runComprehensiveTestSuite(): Promise<SuiteTestResult[]> {
 
   // Suite 7: Store & Category Switching
   try {
-    const turn = await conversationOrchestrator.processTurn('Forget laptops. Show me phones.', 'cust-priya');
-    const switchedToPhones = turn.session.category === 'phones';
+    const turn = await conversationOrchestrator.processTurn('Forget sports. Show me appliances.', 'cust-priya');
+    const switchedToAppliances = turn.session.category === 'appliances';
     results.push({
       suiteId: 7,
       suiteName: 'Store & Category Switching',
-      passed: switchedToPhones,
+      passed: switchedToAppliances,
       details: `Active category switched to '${turn.session.category}' without resetting customer profile.`,
     });
   } catch (e: any) {
@@ -125,7 +125,7 @@ export async function runComprehensiveTestSuite(): Promise<SuiteTestResult[]> {
 
   // Suite 8: Product Comparison Reasoning
   try {
-    const comp = productService.compare(['laptop-1', 'laptop-3']);
+    const comp = productService.compare(['sports-1', 'sports-2']);
     const passed = comp.items.length === 2 && comp.spokenSummary.length > 10;
     results.push({
       suiteId: 8,
@@ -139,7 +139,7 @@ export async function runComprehensiveTestSuite(): Promise<SuiteTestResult[]> {
 
   // Suite 9: Recommendation Ranking with Stated Constraints
   try {
-    const recs = productService.recommend({ budget: { max: 200000, currency: 'INR', isStrict: true, flexibilityPercentage: 5 }, dislikes: ['heavy'] }, 'laptops');
+    const recs = productService.recommend({ budget: { max: 500000, currency: 'INR', isStrict: true, flexibilityPercentage: 5 }, dislikes: ['heavy'] }, 'sports');
     const passed = recs.products.length > 0 && recs.rationale.length > 0;
     results.push({
       suiteId: 9,
@@ -167,7 +167,7 @@ export async function runComprehensiveTestSuite(): Promise<SuiteTestResult[]> {
 
   // Suite 11: Cart Management & Checkout Confirmation
   try {
-    await mcpToolRegistry.executeTool('add_to_cart', { customerId: 'cust-test-suite', productId: 'laptop-1', quantity: 2 });
+    await mcpToolRegistry.executeTool('add_to_cart', { customerId: 'cust-test-suite', productId: 'sports-1', quantity: 2 });
     const orderRes = await mcpToolRegistry.executeTool('checkout', { customerId: 'cust-test-suite' });
     const passed = orderRes.success && orderRes.data.status === 'pending_confirmation';
     results.push({
@@ -231,7 +231,7 @@ export async function runComprehensiveTestSuite(): Promise<SuiteTestResult[]> {
     });
     const demo = await mcpToolRegistry.executeTool('schedule_demo', {
       customerId: 'cust-priya',
-      productId: 'laptop-1',
+      productId: 'sports-1',
       date: '2026-09-12',
       time: '3:00 PM',
     });

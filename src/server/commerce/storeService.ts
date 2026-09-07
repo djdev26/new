@@ -73,9 +73,9 @@ export class StoreService {
       },
       {
         id: 'store-delhi',
-        name: 'SalesPilot Luxury Motors & Electronics — Delhi NCR',
+        name: 'SalesPilot Performance Sports & Smart Living — Delhi NCR',
         type: 'Dealer',
-        category: 'Supercars & Smart Appliances',
+        category: 'Performance Sports & Smart Appliances',
         location: {
           city: 'Delhi NCR',
           address: 'Golf Course Road, Sector 54, Gurugram 122002',
@@ -83,7 +83,7 @@ export class StoreService {
         },
         inventory: {},
         services: [
-          { id: 'srv-track', name: 'Track Day Experience Booking' },
+          { id: 'srv-track', name: 'Superbike Track Day & Fitment Booking' },
           { id: 'srv-home', name: 'Home Automation Architectural Survey' },
         ],
         offers: [
@@ -99,13 +99,13 @@ export class StoreService {
           email: 'delhi.luxury@salespilot.ai',
           managerName: 'Karan Mehra',
         },
-        capabilities: ['VIP Lounge', 'Indoor Dyno Bay', 'Appliance Gallery'],
+        capabilities: ['VIP Lounge', 'Indoor Dyno Bay', 'Connected Fitness Studio', 'Appliance Gallery'],
       },
       {
         id: 'store-chennai',
-        name: 'SalesPilot Coastal Electronics & Mobility — Chennai',
+        name: 'SalesPilot Coastal Sports & Connected Living — Chennai',
         type: 'Store',
-        category: 'Hardware & EV Mobility',
+        category: 'Performance Sports & Appliances',
         location: {
           city: 'Chennai',
           address: 'Anna Salai, Mount Road, Teynampet, Chennai 600018',

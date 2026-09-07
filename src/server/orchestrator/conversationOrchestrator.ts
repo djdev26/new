@@ -90,6 +90,40 @@ export class ConversationOrchestrator {
     // 2. Extract facts & update Passport + Persistent SQLite Memory
     const extractedFacts: any = {};
 
+    // Name / Identity discovery (e.g. "My name is Dijo", "Call me Alex", "I'm Rahul")
+    let discoveredName: string | null = null;
+    const myNameMatch = utterance.match(/(?:my name is|call me)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i);
+    const imNameMatch = utterance.match(/(?:i am|i'm|this is)\s+([A-Za-z]+)(?!\s+(?:looking|searching|trying|wanting|browsing|checking|shopping|buying|here|interested|on|in|at|from|just|not|so|a|an|the|very))/i);
+
+    const matchToUse = myNameMatch || imNameMatch;
+    if (matchToUse && matchToUse[1]) {
+      const candidate = matchToUse[1].trim();
+      const blacklistedWords = [
+        'looking', 'interested', 'here', 'ready', 'trying', 'thinking', 'planning',
+        'fine', 'good', 'searching', 'browsing', 'buying', 'shopping', 'checking',
+        'new', 'just', 'travel', 'travelling', 'riding', 'driving', 'doing', 'working',
+        'a', 'an', 'the', 'so', 'not', 'very', 'sure', 'ok', 'okay', 'yes', 'no'
+      ];
+      if (!blacklistedWords.includes(candidate.toLowerCase()) && candidate.length > 1) {
+        discoveredName = candidate;
+        extractedFacts.name = candidate;
+        session.name = candidate;
+        passport.identity.name = candidate;
+        globalCommerceRepository.upsertCustomer({
+          id: session.customerId,
+          name: candidate,
+        });
+        globalCommerceRepository.saveMemory({
+          customerId: session.customerId,
+          fact: `Customer's name is ${candidate}.`,
+          category: 'identity',
+          confidence: 0.99,
+          source: 'customer_utterance',
+          consent: true,
+        });
+      }
+    }
+
     // Budget extraction (e.g. "budget is 1.5 lakh" or "under 300000" or "under 2.5 crore")
     const lakhMatch = lower.match(/(?:budget|price|under|within|around)\s*(?:is|of)?\s*(?:₹|rs\.?)?\s*(\d+(?:\.\d+)?)\s*(?:lakh|lac|lacs)/i);
     const croreMatch = lower.match(/(?:budget|under|within)\s*(?:is|of)?\s*(?:₹|rs\.?)?\s*(\d+(?:\.\d+)?)\s*(?:crore|cr)/i);
@@ -168,26 +202,16 @@ export class ConversationOrchestrator {
       });
     }
 
-    // Category / Showroom switch intent (Section 19)
-    if (lower.includes('forget cars') || lower.includes('show me laptops') || lower.includes('switch to laptops') || lower.includes('look at laptops')) {
-      extractedFacts.category = 'laptops';
-      session.category = 'laptops';
-      const switchRes = await mcpToolRegistry.executeTool('switch_store', { storeId: 'store-mumbai', category: 'laptops' });
-      toolsExecuted.push(switchRes);
-    } else if (lower.includes('forget laptops') || lower.includes('show me phones') || lower.includes('switch to phones') || lower.includes('show me smartphones')) {
-      extractedFacts.category = 'phones';
-      session.category = 'phones';
-      const switchRes = await mcpToolRegistry.executeTool('switch_store', { storeId: 'store-mumbai', category: 'phones' });
-      toolsExecuted.push(switchRes);
-    } else if (lower.includes('show me cars') || lower.includes('switch to cars') || lower.includes('look at cars')) {
-      extractedFacts.category = 'cars';
-      session.category = 'cars';
-      const switchRes = await mcpToolRegistry.executeTool('switch_store', { storeId: 'store-delhi', category: 'cars' });
-      toolsExecuted.push(switchRes);
-    } else if (lower.includes('appliances') || lower.includes('kitchen') || lower.includes('fridge')) {
+    // Category / Showroom switch intent
+    if (lower.includes('forget sports') || lower.includes('show me appliances') || lower.includes('switch to appliances') || lower.includes('look at appliances') || lower.includes('kitchen') || lower.includes('fridge')) {
       extractedFacts.category = 'appliances';
       session.category = 'appliances';
       const switchRes = await mcpToolRegistry.executeTool('switch_store', { storeId: 'store-bangalore', category: 'appliances' });
+      toolsExecuted.push(switchRes);
+    } else if (lower.includes('show me sports') || lower.includes('switch to sports') || lower.includes('look at sports') || lower.includes('show me bikes') || lower.includes('switch to bikes') || lower.includes('show me superbikes') || lower.includes('forget appliances') || lower.includes('fitness')) {
+      extractedFacts.category = 'sports';
+      session.category = 'sports';
+      const switchRes = await mcpToolRegistry.executeTool('switch_store', { storeId: 'store-mumbai', category: 'sports' });
       toolsExecuted.push(switchRes);
     }
 
@@ -214,17 +238,13 @@ export class ConversationOrchestrator {
       }
     }
 
-    // Case B: Explicit Comparison Request (e.g. "compare the two you showed me" or "compare xps and macbook")
+    // Case B: Explicit Comparison Request (e.g. "compare the two you showed me" or "compare superbike and panigale")
     else if (lower.includes('compare') || lower.includes('which one is better') || lower.includes('difference between')) {
       let targetIds: string[] = [];
-      if (session.category === 'laptops') {
-        targetIds = ['laptop-1', 'laptop-3']; // Dell XPS 16 vs MacBook Pro 16
-      } else if (session.category === 'phones') {
-        targetIds = ['phone-1', 'phone-2']; // iPhone 16 Pro Max vs Galaxy S24 Ultra
-      } else if (session.category === 'cars') {
-        targetIds = ['car-1', 'car-4']; // Porsche 911 vs Range Rover SV
+      if (session.category === 'sports') {
+        targetIds = ['sports-1', 'sports-2']; // Apex Cyber-Pulse vs Ducati Panigale V4 S
       } else {
-        targetIds = ['appliance-1', 'appliance-2'];
+        targetIds = ['appliance-1', 'appliance-2']; // LG InstaView vs Samsung Bespoke
       }
 
       const compRes = await mcpToolRegistry.executeTool('compare_products', { productIds: targetIds });
@@ -284,12 +304,14 @@ Respond concisely in 1-2 natural sentences. Do NOT use robotic clichés like "Ce
         agentSpeech = sanitizeSpeech(llmResponse);
       } catch (_) {
         // Dynamic resilient fallback
-        if (lower.includes('hi') || lower.includes('hello')) {
+        if (discoveredName) {
+          agentSpeech = `Awesome to meet you, ${discoveredName}! Welcome to SalesPilot. We feature championship sports superbikes and connected smart home appliances. What can I pull up on screen for you today?`;
+        } else if (lower.includes('hi') || lower.includes('hello')) {
           agentSpeech = `Hey ${session.name.split(' ')[0]}! Welcome to SalesPilot. I'm exploring our ${currentCategory} lineup—what key specs or budget are you targeting?`;
-        } else if (lower.includes('phone') || session.category === 'phones') {
-          agentSpeech = `Looking at our smartphones, the Apple iPhone 16 Pro Max and Samsung Galaxy S24 Ultra are our top two flagships. Are you leaning towards iOS or Android?`;
-        } else if (lower.includes('laptop') || session.category === 'laptops') {
-          agentSpeech = `For workstations, the Dell XPS 16 and MacBook Pro 16 lead the pack. If battery life is your priority, the MacBook wins, but if you want raw Windows modularity, go with the Dell.`;
+        } else if (session.category === 'sports' || lower.includes('sport') || lower.includes('bike')) {
+          agentSpeech = `Looking at our performance sports fleet, the Apex Cyber-Pulse Electric Superbike and Ducati Panigale V4 S lead the pack. Are you leaning towards instantaneous electric torque or track-day combustion roar?`;
+        } else if (session.category === 'appliances' || lower.includes('appliance') || lower.includes('fridge')) {
+          agentSpeech = `For smart appliances, the LG InstaView 655L and Samsung Bespoke AI 467L lead our kitchen showcase. Are you looking for smart door transparency or customizable design panels?`;
         } else {
           agentSpeech = `Got it. Let me pull up the best options in our ${currentCategory} catalog matching that for you.`;
         }

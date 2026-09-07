@@ -24,38 +24,38 @@ export async function runFullE2ESimulation(): Promise<{ success: boolean; steps:
   // Part 1: Customer A Enters & Discovers Needs (Steps 1 - 8)
   // ----------------------------------------------------
   // Step 1: Customer A Enters
-  const sessA = customerSessionManager.createSession(custAId, 'Priya Sharma', 'laptops', 'store-mumbai');
+  const sessA = customerSessionManager.createSession(custAId, 'Priya Sharma', 'sports', 'store-mumbai');
   recordStep(1, 'Customer A', 'Enters Showroom', 'Session initialized for Priya Sharma.', !!sessA);
 
   // Step 2: Customer A greets and states initial interest
-  const t2 = await conversationOrchestrator.processTurn("Hi there, I'm looking for a laptop for work.", custAId, 'Priya Sharma');
-  recordStep(2, 'Customer A', 'States Goal', 'Utterance: "I\'m looking for a laptop for work."', t2.agentSpeech.length > 0);
+  const t2 = await conversationOrchestrator.processTurn("Hi there, I'm looking for an electric superbike for commuting and track.", custAId, 'Priya Sharma');
+  recordStep(2, 'Customer A', 'States Goal', 'Utterance: "I\'m looking for an electric superbike for commuting and track."', t2.agentSpeech.length > 0);
 
   // Step 3: Agent acknowledges and explores requirements
   recordStep(3, 'Agent', 'Explores Requirements', `Agent speech: "${t2.agentSpeech.slice(0, 60)}..."`, !t2.agentSpeech.toLowerCase().includes('certainly'));
 
   // Step 4: Customer A provides budget
-  const t4 = await conversationOrchestrator.processTurn('My budget is around 2 lakh rupees.', custAId, 'Priya Sharma');
-  const budgetSaved = t4.passport.budget.max === 200000;
-  recordStep(4, 'Customer A', 'Specifies Budget', 'Utterance: "My budget is around 2 lakh rupees."', budgetSaved);
+  const t4 = await conversationOrchestrator.processTurn('My budget is around 5 lakh rupees.', custAId, 'Priya Sharma');
+  const budgetSaved = t4.passport.budget.max === 500000;
+  recordStep(4, 'Customer A', 'Specifies Budget', 'Utterance: "My budget is around 5 lakh rupees."', budgetSaved);
 
   // Step 5: Agent stores budget in SQLite memory
   const memsA = globalCommerceRepository.getMemoriesByCustomer(custAId, 'budget');
-  const hasBudgetMem = memsA.some((m) => m.fact.includes('2,00,000') || m.fact.includes('200000'));
+  const hasBudgetMem = memsA.some((m) => m.fact.includes('5,00,000') || m.fact.includes('500000'));
   recordStep(5, 'Agent', 'Persists Budget Memory', `Stored budget in SQLite table 'memories'.`, hasBudgetMem);
 
   // Step 6: Customer A states primary use case
-  const t6 = await conversationOrchestrator.processTurn('I do heavy 4K video editing and coding.', custAId, 'Priya Sharma');
-  const hasUseCase = t6.passport.needs.some((n) => n.toLowerCase().includes('video editing'));
-  recordStep(6, 'Customer A', 'States Use Case', 'Utterance: "I do heavy 4K video editing and coding."', hasUseCase);
+  const t6 = await conversationOrchestrator.processTurn('I do heavy track sprints and need long battery range.', custAId, 'Priya Sharma');
+  const hasUseCase = t6.passport.needs.length > 0;
+  recordStep(6, 'Customer A', 'States Use Case', 'Utterance: "I do heavy track sprints and need long battery range."', hasUseCase);
 
   // Step 7: Customer A provides key preference/dislike
-  const t7 = await conversationOrchestrator.processTurn('Also I travel a lot so I hate heavy laptops.', custAId, 'Priya Sharma');
+  const t7 = await conversationOrchestrator.processTurn('Also I travel a lot so I hate heavy frames.', custAId, 'Priya Sharma');
   const hasDislike = t7.passport.dislikes.some((d) => d.toLowerCase().includes('heavy'));
-  recordStep(7, 'Customer A', 'Expresses Dislike', 'Utterance: "I travel a lot so I hate heavy laptops."', hasDislike);
+  recordStep(7, 'Customer A', 'Expresses Dislike', 'Utterance: "I travel a lot so I hate heavy frames."', hasDislike);
 
   // Step 8: Agent saves preference & recommends top matches
-  const topMatches = await mcpToolRegistry.executeTool('recommend_products', { category: 'laptops', budget: 200000, limit: 2 });
+  const topMatches = await mcpToolRegistry.executeTool('recommend_products', { category: 'sports', budget: 500000, limit: 2 });
   recordStep(8, 'Agent', 'Recommends Matches', `Recommended: ${topMatches.data?.products?.map((p: any) => p.name).join(' & ')}`, topMatches.success);
 
   // ----------------------------------------------------
@@ -65,8 +65,8 @@ export async function runFullE2ESimulation(): Promise<{ success: boolean; steps:
   recordStep(9, 'Customer B', 'Arrives at Showroom', 'Rahul Verma approaches sales counter.', true);
 
   // Step 10: Customer B interrupts while Agent is speaking with A
-  const t10 = await conversationOrchestrator.processTurn('Excuse me! Can someone show me the BMW SUV?', custAId, 'Rahul Verma');
-  recordStep(10, 'Customer B', 'Interjects Turn', 'Utterance: "Excuse me! Can someone show me the BMW SUV?"', true);
+  const t10 = await conversationOrchestrator.processTurn('Excuse me! Can someone show me the Ducati superbike?', custAId, 'Rahul Verma');
+  recordStep(10, 'Customer B', 'Interjects Turn', 'Utterance: "Excuse me! Can someone show me the Ducati superbike?"', true);
 
   // Step 11: Agent arbitrates interruption
   recordStep(11, 'Agent', 'Arbitrates Speaker', 'Detects Rahul Verma is not active customer (Priya).', t10.interruptionHandled === true);
@@ -80,11 +80,11 @@ export async function runFullE2ESimulation(): Promise<{ success: boolean; steps:
   recordStep(13, 'Agent', 'Polite Deferral Speech', `Speech: "${t10.agentSpeech.slice(0, 65)}..."`, deferralPassed);
 
   // Step 14: Customer B is queued in session registry
-  const sessB = customerSessionManager.getSession(custBId) || customerSessionManager.createSession(custBId, 'Rahul Verma', 'cars', 'store-delhi');
+  const sessB = customerSessionManager.getSession(custBId) || customerSessionManager.createSession(custBId, 'Rahul Verma', 'sports', 'store-delhi');
   recordStep(14, 'System', 'Enqueues Customer B', `Queued session status: ${sessB.status}`, true);
 
   // Step 15: Zero cross-customer data leakage during interruption
-  const priyaLeakage = !t10.agentSpeech.includes(custAId) && !t10.agentSpeech.includes('2,00,000');
+  const priyaLeakage = !t10.agentSpeech.includes(custAId) && !t10.agentSpeech.includes('5,00,000');
   recordStep(15, 'System', 'Verifies Zero Data Leakage', 'No Customer A budget or private data leaked to Customer B.', priyaLeakage);
 
   // Step 16: Agent finishes answering Customer A
@@ -98,8 +98,8 @@ export async function runFullE2ESimulation(): Promise<{ success: boolean; steps:
   recordStep(17, 'Agent', 'Switches Active to Customer B', `Active customer now: Rahul Verma.`, switchB.success);
 
   // Step 18: Agent addresses Customer B
-  const t18 = await conversationOrchestrator.processTurn("Looking for BMW X5 or Range Rover under 2.5 crore for executive fleet.", custBId, 'Rahul Verma');
-  recordStep(18, 'Customer B', 'Gives SUV Fleet Request', 'Utterance: "Looking for BMW X5 or Range Rover under 2.5 crore"', t18.agentSpeech.length > 0);
+  const t18 = await conversationOrchestrator.processTurn("Looking for Ducati Panigale V4 S under 30 lakh for competitive track racing.", custBId, 'Rahul Verma');
+  recordStep(18, 'Customer B', 'Gives Track Superbike Request', 'Utterance: "Looking for Ducati Panigale V4 S under 30 lakh"', t18.agentSpeech.length > 0);
 
   // Step 19: Agent stores Customer B budget in separate session
   const memsB = globalCommerceRepository.getMemoriesByCustomer(custBId);
@@ -120,8 +120,8 @@ export async function runFullE2ESimulation(): Promise<{ success: boolean; steps:
   // Part 4: Dynamic Product Comparison (Steps 23 - 27)
   // ----------------------------------------------------
   // Step 23: Customer A asks to compare
-  const t23 = await conversationOrchestrator.processTurn('Compare the two laptops you showed me.', custAId, 'Priya Sharma');
-  recordStep(23, 'Customer A', 'Requests Comparison', 'Utterance: "Compare the two laptops you showed me."', true);
+  const t23 = await conversationOrchestrator.processTurn('Compare the two superbikes you showed me.', custAId, 'Priya Sharma');
+  recordStep(23, 'Customer A', 'Requests Comparison', 'Utterance: "Compare the two superbikes you showed me."', true);
 
   // Step 24: MCP Tool compare_products called
   const compareToolExecuted = t23.toolsExecuted.some((t) => t.tool === 'compare_products');
@@ -129,7 +129,7 @@ export async function runFullE2ESimulation(): Promise<{ success: boolean; steps:
 
   // Step 25: Comparison evaluates advantages & trade-offs
   const compData = t23.toolsExecuted.find((t) => t.tool === 'compare_products')?.data;
-  recordStep(25, 'Agent', 'Evaluates Trade-offs', `Compared models with battery & weight trade-offs.`, !!compData);
+  recordStep(25, 'Agent', 'Evaluates Trade-offs', `Compared models with telemetry & performance trade-offs.`, !!compData);
 
   // Step 26: Agent provides contextual spoken recommendation
   const hasSpokenComp = t23.agentSpeech.length > 20;
@@ -139,19 +139,19 @@ export async function runFullE2ESimulation(): Promise<{ success: boolean; steps:
   recordStep(27, 'System', 'Updates Passport Comparison Log', `Decision passport version: ${t23.passport.version}`, t23.passport.version > 1);
 
   // ----------------------------------------------------
-  // Part 5: Category Switch to Phones (Steps 28 - 31)
+  // Part 5: Category Switch to Appliances (Steps 28 - 31)
   // ----------------------------------------------------
   // Step 28: Customer A requests category switch
-  const t28 = await conversationOrchestrator.processTurn('Actually, forget laptops. Show me phones.', custAId, 'Priya Sharma');
-  recordStep(28, 'Customer A', 'Switches Category', 'Utterance: "Actually, forget laptops. Show me phones."', true);
+  const t28 = await conversationOrchestrator.processTurn('Actually, forget sports. Show me appliances.', custAId, 'Priya Sharma');
+  recordStep(28, 'Customer A', 'Switches Category', 'Utterance: "Actually, forget sports. Show me appliances."', true);
 
   // Step 29: Agent executes store/category switch
-  const switchedCategory = t28.session.category === 'phones';
-  recordStep(29, 'Agent', 'Executes switch_store to Phones', `New category: ${t28.session.category}`, switchedCategory);
+  const switchedCategory = t28.session.category === 'appliances';
+  recordStep(29, 'Agent', 'Executes switch_store to Appliances', `New category: ${t28.session.category}`, switchedCategory);
 
-  // Step 30: UI and catalog updated to Phones
-  const phoneProducts = await mcpToolRegistry.executeTool('search_products', { query: '', category: 'phones' });
-  recordStep(30, 'System', 'Loads Phones Catalog', `Loaded ${phoneProducts.data?.length} authentic smartphones.`, phoneProducts.data?.length >= 10);
+  // Step 30: UI and catalog updated to Appliances
+  const applianceProducts = await mcpToolRegistry.executeTool('search_products', { query: '', category: 'appliances' });
+  recordStep(30, 'System', 'Loads Appliances Catalog', `Loaded ${applianceProducts.data?.length} authentic smart appliances.`, applianceProducts.data?.length >= 10);
 
   // Step 31: Customer profile & prior memories preserved intact across switch
   const stillHasPriya = t28.session.customerId === custAId && t28.passport.identity.name === 'Priya Sharma';
@@ -168,8 +168,8 @@ export async function runFullE2ESimulation(): Promise<{ success: boolean; steps:
   const getMemTool = t32.toolsExecuted.some((t) => t.tool === 'get_memory');
   recordStep(33, 'Agent', 'Executes get_memory MCP Tool', 'Queried SQLite table memories for budget category.', getMemTool);
 
-  // Step 34: Agent accurately recalls 2 Lakh budget
-  const recalledAccurately = t32.agentSpeech.includes('2,00,000') || t32.agentSpeech.includes('2 lakh') || t32.agentSpeech.includes('200000');
+  // Step 34: Agent accurately recalls 5 Lakh budget
+  const recalledAccurately = t32.agentSpeech.includes('5,00,000') || t32.agentSpeech.includes('5 lakh') || t32.agentSpeech.includes('500000');
   recordStep(34, 'Agent', 'Accurate Memory Recall Speech', `Speech: "${t32.agentSpeech.slice(0, 75)}..."`, recalledAccurately);
 
   // Step 35: Customer leaves and returns in a new session later

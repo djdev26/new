@@ -18,6 +18,7 @@ import { DemoScenarioRunner, DEMO_STEPS, DemoStep } from './components/DemoScena
 // New Agora Conversational AI & Autonomous Showroom Components
 import { ShowroomCanvas3D } from './components/ShowroomCanvas3D';
 import { ShowroomDrawer } from './components/ShowroomDrawer';
+import { HeroVoiceStage } from './components/HeroVoiceStage';
 import { ProductCatalogSection } from './components/ProductCatalogSection';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { ProductCompareModal } from './components/ProductCompareModal';
@@ -52,7 +53,7 @@ import { calculateQuote } from './server/pricingEngine';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'analytics' | 'rules'>('dashboard');
-  const [heroCollapsed, setHeroCollapsed] = useState(false);
+  const [heroCollapsed, setHeroCollapsed] = useState(true);
 
   // Core Customer State & Real-time Telemetry
   const [conversationId] = useState(`session-${Date.now()}`);
@@ -61,14 +62,14 @@ export default function App() {
     {
       id: 'init-1',
       speaker: 'agent',
-      text: "Hello Priya! Welcome to SalesPilot AI. I'm your autonomous showroom sales advisor. I can walk you through our 3D interactive showrooms for performance sports cars, neural laptops, or connected smart appliances, handle trade-offs, and customize configurations on the fly. What catches your eye today?",
+      text: "Hello Priya! Welcome to SalesPilot AI. I'm your autonomous showroom sales advisor. I can walk you through our 3D interactive showrooms for performance sports superbikes or connected smart appliances, handle trade-offs, and customize configurations on the fly. What catches your eye today?",
       timestamp: '10:00 AM',
     },
   ]);
 
   const [intentResult, setIntentResult] = useState<IntentResult | null>(null);
   const [objectionResult, setObjectionResult] = useState<ObjectionResult | null>(null);
-  const [quoteResult, setQuoteResult] = useState<QuoteResult>(() => calculateQuote(1, 'Supercars & SUVs'));
+  const [quoteResult, setQuoteResult] = useState<QuoteResult>(() => calculateQuote(1, 'Performance Sports & Mobility'));
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
   // Multi-Customer Concurrency & Priority State (Sections 18 & 19)
@@ -80,7 +81,7 @@ export default function App() {
       role: 'VP of Engineering',
       company: 'ApexScale Corp',
       status: 'active',
-      memorySnippet: 'Evaluating Dell XPS 16 vs MacBook Pro 16 & Porsche 911 executive fleet.',
+      memorySnippet: 'Evaluating Apex Cyber-Pulse Veloce 800 Electric Superbike.',
       state: customerState,
     },
     {
@@ -89,7 +90,7 @@ export default function App() {
       role: 'Fleet Operations Director',
       company: 'Velocity Logistics',
       status: 'waiting',
-      memorySnippet: 'Interested in Porsche 911 Carrera and Land Rover Range Rover SV.',
+      memorySnippet: 'Interested in Ducati Panigale V4 S and Apex Superbike fleet.',
       state: customerState,
     },
     {
@@ -103,9 +104,9 @@ export default function App() {
     },
   ]);
 
-  // Autonomous Showroom State (3 Showrooms: cars, laptops, appliances)
-  const [currentShowroomId, setCurrentShowroomId] = useState<ShowroomId>('cars');
-  const [selectedProductId, setSelectedProductId] = useState<string>('car-1');
+  // Autonomous Showroom State (2 Showrooms: sports, appliances)
+  const [currentShowroomId, setCurrentShowroomId] = useState<ShowroomId>('sports');
+  const [selectedProductId, setSelectedProductId] = useState<string>('sports-1');
   const [comparedProducts, setComparedProducts] = useState<any[]>([]);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState<boolean>(false);
   const [detailProduct, setDetailProduct] = useState<any | null>(null);
@@ -144,10 +145,10 @@ export default function App() {
       id: 'tool-init',
       toolName: 'switch_showroom',
       label: 'Autonomous 3D Mount',
-      arguments: { showroomId: 'cars', model: 'Porsche 911 Carrera' },
+      arguments: { showroomId: 'sports', model: 'Apex Cyber-Pulse Electric Superbike' },
       timestamp: '10:00:02 AM',
       status: 'success',
-      output: 'Mounted 3D Porsche 911 Carrera (992.2) with 3.0L twin-turbo boxer engine & PASM suspension.',
+      output: 'Mounted 3D Apex Cyber-Pulse Veloce 800 Electric Superbike with 85kW motor & solid-state battery.',
       durationMs: 72,
     },
   ]);
@@ -197,9 +198,9 @@ export default function App() {
   const handleSelectShowroom = useCallback(
     (id: string, source: 'user' | 'agent' = 'user') => {
       const validId: ShowroomId =
-        id === 'laptop' ? 'laptops' : (SHOWROOMS_DATA[id as ShowroomId] ? (id as ShowroomId) : 'cars');
+        SHOWROOMS_DATA[id as ShowroomId] ? (id as ShowroomId) : 'sports';
       setCurrentShowroomId(validId);
-      const showroom = SHOWROOMS_DATA[validId] || SHOWROOMS_DATA.cars;
+      const showroom = SHOWROOMS_DATA[validId] || SHOWROOMS_DATA.sports;
 
       if (source === 'agent') {
         setLastAutonomousSwitch({
@@ -244,7 +245,7 @@ export default function App() {
   const handleNegotiateDiscount = useCallback(
     (requestedDiscount: number = 20, reason: string = 'Autonomous Closer Negotiation') => {
       setNegotiatedDiscount(requestedDiscount);
-      const showroom = SHOWROOMS_DATA[currentShowroomId] || SHOWROOMS_DATA.cars;
+      const showroom = SHOWROOMS_DATA[currentShowroomId] || SHOWROOMS_DATA.sports;
       const unitBase = showroom.basePrice;
       const baseTotal = unitBase * orderQuantity;
       const discountAmt = Math.round(baseTotal * (requestedDiscount / 100));
@@ -287,7 +288,7 @@ export default function App() {
   const handleTriggerAgenticTool = (toolName: AgenticToolType, args: Record<string, any>) => {
     switch (toolName) {
       case 'switch_showroom':
-        handleSelectShowroom(args.showroomId || 'cars', 'agent');
+        handleSelectShowroom(args.showroomId || 'sports', 'agent');
         break;
       case 'negotiate_discount':
         handleNegotiateDiscount(args.requestedDiscount || 20, 'Manual evaluator simulation');
@@ -515,11 +516,31 @@ export default function App() {
     [logToolCall]
   );
 
-  // Voice AI Hook
+  // Proactive First Speech Handler (when AI introduces itself first upon connect)
+  const handleAgentSpokeFirst = useCallback((greeting: string) => {
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setTranscript((prev) => {
+      if (prev.some((t) => t.speaker === 'agent' && t.text === greeting)) return prev;
+      return [
+        ...prev,
+        {
+          id: `ai-init-${Date.now()}`,
+          speaker: 'agent',
+          text: greeting,
+          timestamp,
+        },
+      ];
+    });
+  }, []);
+
+  // Autonomous Real-Time Voice AI Hook
   const voice = useVoiceCall({
     onUtteranceSubmitted: handleProcessUtterance,
     onInterruption: handleInterruption,
+    onAgentSpokeFirst: handleAgentSpokeFirst,
     conversationId,
+    autoStart: true,
+    initialGreeting: "Welcome to our showroom! I'm your AI sales pilot. Great to have you here — what's your name, and what are you looking for today?",
   });
 
   // Simulate Multi-Customer Interruption (Polite Deferral)
@@ -616,20 +637,20 @@ export default function App() {
     const initialState = getInitialCustomerState(conversationId);
     setCustomerState(initialState);
     setScenarioStepIndex(0);
-    setCurrentShowroomId('cars');
+    setCurrentShowroomId('sports');
     setNegotiatedDiscount(15);
     setTranscript([
       {
         id: 'init-1',
         speaker: 'agent',
-        text: "Hello Priya! Welcome to SalesPilot AI with full Agora Voice AI. I'm your autonomous sales representative. I can guide you through our 3D showrooms for performance sports cars, neural laptops, or smart appliances, negotiate bulk pricing, or take instant orders. What would you like to explore?",
+        text: "Hello Priya! Welcome to SalesPilot AI with full Agora Voice AI. I'm your autonomous sales representative. I can guide you through our 3D showrooms for performance sports superbikes or smart appliances, negotiate bulk pricing, or take instant orders. What would you like to explore?",
         timestamp: '10:00 AM',
       },
     ]);
     showToast('Reset demo state to initial buyer baseline.');
   };
 
-  const currentShowroom = SHOWROOMS_DATA[currentShowroomId] || SHOWROOMS_DATA.cars;
+  const currentShowroom = SHOWROOMS_DATA[currentShowroomId] || SHOWROOMS_DATA.sports;
 
   return (
     <div className="min-h-screen bg-[#EEF2F6] text-slate-800 flex flex-col selection:bg-indigo-500 selection:text-white">
@@ -670,6 +691,24 @@ export default function App() {
               currentStage={customerState.current_stage}
               onSelectStage={(stage) => setCustomerState((prev) => ({ ...prev, current_stage: stage }))}
               qualificationScore={customerState.qualification_score}
+            />
+
+            {/* Main Core: Real-Time Autonomous Voice AI Showroom Stage */}
+            <HeroVoiceStage
+              callState={voice.callState}
+              isMuted={voice.isMuted}
+              audioLevel={voice.audioLevel}
+              statusMessage={voice.statusMessage}
+              errorMessage={voice.errorMessage}
+              isAwaitingGesture={voice.isAwaitingGesture}
+              liveInterimTranscript={voice.liveInterimTranscript}
+              activeAISpeech={voice.activeAISpeech}
+              onStartCall={voice.startCall}
+              onEndCall={voice.endCall}
+              onToggleMute={voice.toggleMute}
+              onSubmitUtterance={(text) => voice.processCustomerUtterance(text)}
+              isProcessing={isProcessingTurn}
+              currentCustomerName={customerSessions.find((s) => s.id === activeSessionId)?.name || 'Customer'}
             />
 
             {/* Multi-Customer Concurrency & Priority Bar (Sections 18 & 19) */}

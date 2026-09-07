@@ -6,8 +6,7 @@ import {
   CheckCircle2,
   Clock,
   Code2,
-  Car,
-  Laptop,
+  Bike,
   Refrigerator,
   CreditCard,
   Calendar,
@@ -77,31 +76,23 @@ export const AgenticActionConsole: React.FC<AgenticActionConsoleProps> = ({
             Simulate Tool:
           </span>
           <button
-            onClick={() => onTriggerTool('switch_showroom', { showroomId: 'cars', reason: 'Customer inquired about luxury supercars & SUVs' })}
+            onClick={() => onTriggerTool('switch_showroom', { showroomId: 'sports', reason: 'Customer inquired about electric superbike & sports mobility' })}
             disabled={isExecuting}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 hover:border-indigo-300 shadow-2xs transition-all disabled:opacity-50"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 hover:border-cyan-300 shadow-2xs transition-all disabled:opacity-50"
           >
-            <Car className="h-3 w-3 text-red-600" />
-            <span>Switch: Cars</span>
-          </button>
-          <button
-            onClick={() => onTriggerTool('switch_showroom', { showroomId: 'laptops', reason: 'Customer requested developer AI hardware' })}
-            disabled={isExecuting}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 hover:border-indigo-300 shadow-2xs transition-all disabled:opacity-50"
-          >
-            <Laptop className="h-3 w-3 text-indigo-600" />
-            <span>Switch: Laptops</span>
+            <Bike className="h-3 w-3 text-cyan-600" />
+            <span>Switch: Sports</span>
           </button>
           <button
             onClick={() => onTriggerTool('switch_showroom', { showroomId: 'appliances', reason: 'Customer requested kitchen smart appliances' })}
             disabled={isExecuting}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 hover:border-indigo-300 shadow-2xs transition-all disabled:opacity-50"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 hover:border-emerald-300 shadow-2xs transition-all disabled:opacity-50"
           >
             <Refrigerator className="h-3 w-3 text-emerald-600" />
             <span>Switch: Appliances</span>
           </button>
           <button
-            onClick={() => onTriggerTool('negotiate_discount', { requestedQty: 25, requestedDiscount: 15 })}
+            onClick={() => onTriggerTool('negotiate_discount', { requestedQty: 2, requestedDiscount: 15 })}
             disabled={isExecuting}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 text-[11px] font-bold text-amber-800 hover:bg-amber-100 shadow-2xs transition-all disabled:opacity-50"
           >

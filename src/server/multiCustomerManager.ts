@@ -38,20 +38,21 @@ export class CustomerSessionManager {
   }
 
   private bootstrapKnownCustomers(): void {
-    // 1. Priya Sharma (Enterprise/Workstation evaluation)
+    // 1. Priya Sharma (Performance Sports evaluation)
     const priyaId = 'cust-priya';
-    let priyaPassport = createInitialPassport(priyaId, `sess-${priyaId}`, 'Priya Sharma', 'laptops', 'store-mumbai');
+    let priyaPassport = createInitialPassport(priyaId, `sess-${priyaId}`, 'Priya Sharma', 'sports', 'store-mumbai');
     priyaPassport = updatePassportWithFacts(priyaPassport, {
       name: 'Priya Sharma',
       company: 'ApexScale Corp',
       email: 'priya.s@apexscale.io',
-      budgetMax: 300000,
-      addNeed: 'High-performance AI workstation with long battery life',
-      addPreference: 'Lightweight aluminium or carbon-fiber chassis',
-      addDislike: 'Heavy gaming rigs exceeding 2.2kg',
-      considerProduct: 'laptop-1',
-      preferProduct: 'laptop-1',
+      budgetMax: 500000,
+      addNeed: 'High-performance electric superbike for daily mobility and weekend track agility',
+      addPreference: 'Solid-state battery, integrated Agora voice helmet audio, lightweight carbon chassis',
+      addDislike: 'Heavy petrol cruisers exceeding 220kg',
+      considerProduct: 'sports-1',
+      preferProduct: 'sports-1',
       intentSignal: 'high',
+      category: 'sports',
     });
 
     globalCommerceRepository.upsertCustomer({
@@ -60,12 +61,12 @@ export class CustomerSessionManager {
       email: 'priya.s@apexscale.io',
       company: 'ApexScale Corp',
       role: 'VP of Engineering',
-      metadata: { targetCategory: 'laptops' },
+      metadata: { targetCategory: 'sports' },
     });
 
     globalCommerceRepository.saveMemory({
       customerId: priyaId,
-      fact: 'Budget ceiling is ₹3,00,000 for neural workstation rollout.',
+      fact: 'Budget ceiling is ₹5,00,000 for performance electric mobility.',
       category: 'budget',
       confidence: 1.0,
       source: 'customer_utterance',
@@ -74,8 +75,8 @@ export class CustomerSessionManager {
 
     globalCommerceRepository.saveMemory({
       customerId: priyaId,
-      fact: 'Dislikes heavy laptops; prioritizes all-day battery life for executive travel.',
-      category: 'dislike',
+      fact: 'Prioritizes lightweight carbon monocoque and Agora helmet audio navigation.',
+      category: 'preference',
       confidence: 0.95,
       source: 'customer_utterance',
       consent: true,
@@ -90,47 +91,47 @@ export class CustomerSessionManager {
       company: 'ApexScale Corp',
       status: 'active',
       storeId: 'store-mumbai',
-      category: 'laptops',
+      category: 'sports',
       passport: priyaPassport,
       transcript: [
         {
           speaker: 'agent',
-          text: 'Hello Priya! Welcome back to SalesPilot. I have your Dell XPS 16 and MacBook Pro 16 configurations ready for comparison.',
+          text: 'Hello Priya! Welcome back to SalesPilot. I have your Apex Cyber-Pulse Veloce 800 and Ducati Panigale V4 S configurations ready for review.',
           timestamp: '10:00 AM',
         },
       ],
       priority: 1,
       lastInteraction: new Date().toISOString(),
-      pendingActions: ['Compare Dell XPS 16 vs MacBook Pro 16'],
+      pendingActions: ['Compare Apex Cyber-Pulse vs Ducati Panigale V4 S'],
     };
     this.sessions.set(priyaId, priyaSession);
     this.activeCustomerId = priyaId;
 
-    // 2. Rahul Verma (Luxury Auto / Fleet)
+    // 2. Rahul Verma (Track Mobility & Studio Fitness)
     const rahulId = 'cust-rahul';
-    let rahulPassport = createInitialPassport(rahulId, `sess-${rahulId}`, 'Rahul Verma', 'cars', 'store-delhi');
+    let rahulPassport = createInitialPassport(rahulId, `sess-${rahulId}`, 'Rahul Verma', 'sports', 'store-delhi');
     rahulPassport = updatePassportWithFacts(rahulPassport, {
       name: 'Rahul Verma',
-      company: 'Velocity Logistics',
-      budgetMax: 25000000,
-      addNeed: 'Luxury performance SUV for executive VIP transport',
-      addPreference: 'All-wheel drive, air suspension, commanding road presence',
-      considerProduct: 'car-4',
+      company: 'Velocity Athletics',
+      budgetMax: 3000000,
+      addNeed: 'Championship track superbike and studio rowing equipment',
+      addPreference: 'Öhlins electronic suspension, Brembo Stylema calipers, dual power telemetry',
+      considerProduct: 'sports-2',
       intentSignal: 'medium',
-      category: 'cars',
+      category: 'sports',
     });
 
     globalCommerceRepository.upsertCustomer({
       id: rahulId,
       name: 'Rahul Verma',
-      company: 'Velocity Logistics',
-      role: 'Fleet Operations Director',
-      metadata: { targetCategory: 'cars' },
+      company: 'Velocity Athletics',
+      role: 'Athletic Operations Director',
+      metadata: { targetCategory: 'sports' },
     });
 
     globalCommerceRepository.saveMemory({
       customerId: rahulId,
-      fact: 'Looking for luxury SUV under ₹2.5 Crore for executive fleet.',
+      fact: 'Looking for track-spec superbike and studio rowing gear under ₹30 Lakh.',
       category: 'budget',
       confidence: 0.9,
       source: 'customer_utterance',
@@ -142,16 +143,16 @@ export class CustomerSessionManager {
       speakerId: 'spk-rahul',
       conversationId: `conv-${rahulId}`,
       name: 'Rahul Verma',
-      role: 'Fleet Operations Director',
-      company: 'Velocity Logistics',
+      role: 'Athletic Operations Director',
+      company: 'Velocity Athletics',
       status: 'waiting',
       storeId: 'store-delhi',
-      category: 'cars',
+      category: 'sports',
       passport: rahulPassport,
       transcript: [],
       priority: 2,
       lastInteraction: new Date(Date.now() - 300000).toISOString(),
-      pendingActions: ['Inspect Range Rover SV specs'],
+      pendingActions: ['Inspect Ducati Panigale V4 S specs'],
     };
     this.sessions.set(rahulId, rahulSession);
 

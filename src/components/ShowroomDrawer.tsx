@@ -2,10 +2,8 @@ import React from 'react';
 import { ShowroomId } from '../types/salespilot';
 import { SHOWROOMS_DATA, SHOWROOM_KEYS } from '../data/showrooms';
 import {
-  Laptop,
+  Bike,
   Refrigerator,
-  Car,
-  Smartphone,
   Sparkles,
   Zap,
   Mic,
@@ -29,12 +27,8 @@ export const ShowroomDrawer: React.FC<ShowroomDrawerProps> = ({
 }) => {
   const getShowroomIcon = (id: ShowroomId) => {
     switch (id) {
-      case 'cars':
-        return <Car className="h-4 w-4" />;
-      case 'laptops':
-        return <Laptop className="h-4 w-4" />;
-      case 'phones':
-        return <Smartphone className="h-4 w-4" />;
+      case 'sports':
+        return <Bike className="h-4 w-4" />;
       case 'appliances':
       default:
         return <Refrigerator className="h-4 w-4" />;
@@ -54,7 +48,7 @@ export const ShowroomDrawer: React.FC<ShowroomDrawerProps> = ({
               Autonomous 3D Showroom Navigator
             </h3>
             <span className="text-[11px] text-slate-500 font-medium">
-              4 Dedicated Showrooms · Voice-controlled product switching & live 3D hardware inspection
+              2 Dedicated Showrooms (Performance Sports & Home Appliances) · Voice-controlled 3D hardware inspection
             </span>
           </div>
         </div>
@@ -70,13 +64,13 @@ export const ShowroomDrawer: React.FC<ShowroomDrawerProps> = ({
         ) : (
           <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[10px] text-slate-600 font-semibold border border-slate-200">
             <Mic className="h-3 w-3 text-indigo-600" />
-            <span>Say "Switch to cars", "Show me laptops", or "Take me to appliances"</span>
+            <span>Say "Switch to sports" or "Take me to appliances"</span>
           </div>
         )}
       </div>
 
-      {/* Showroom Tab Buttons Grid - 3 Showrooms */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Showroom Tab Buttons Grid - 2 Showrooms */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {SHOWROOM_KEYS.map((key) => {
           const item = SHOWROOMS_DATA[key];
           const isSelected = currentShowroomId === key;
@@ -119,7 +113,7 @@ export const ShowroomDrawer: React.FC<ShowroomDrawerProps> = ({
               <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[10px]">
                 <span className="font-bold text-indigo-600">3D Interactive</span>
                 <span className="text-slate-500 font-mono">
-                  {key === 'cars' ? 'Porsche · Range Rover · SUV' : key === 'laptops' ? 'XPS 16 · MacBook · ROG' : 'InstaView · Bespoke · AC'}
+                  {key === 'sports' ? 'Apex Veloce · Panigale · Peloton' : 'InstaView · Bespoke · AC'}
                 </span>
               </div>
             </button>

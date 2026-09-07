@@ -420,28 +420,147 @@ export class PhoneAdapter implements DomainAdapter {
   }
 }
 
+export class SportsAdapter implements DomainAdapter {
+  category = 'sports';
+  displayName = 'Performance Sports & Mobility';
+
+  getComparisonCriteria(): string[] {
+    return ['0-100 km/h acceleration', 'Motor / Power Output', 'Range & Battery Chemistry', 'Frame & Weight', 'Smart Telemetry'];
+  }
+
+  formatSpecificationHighlight(product: UniversalProduct): string {
+    const power = product.specifications['Peak Power'] || product.specifications['Power'] || product.specifications['Drivetrain'] || 'N/A';
+    const accel = product.specifications['0-100 km/h'] || product.specifications['Acceleration'] || 'N/A';
+    return `${product.brand} ${product.name} delivers ${power} with acceleration of ${accel}.`;
+  }
+
+  calculateMatchScore(product: UniversalProduct, passport: Partial<CustomerDecisionPassport> = {}): number {
+    let score = 70;
+    const budget = passport.budget?.max;
+    if (budget && product.price <= budget) score += 15;
+    if (budget && product.price > budget * 1.15) score -= 25;
+
+    const prefs = (passport.preferences || []).map((p) => p.toLowerCase());
+    const lowerName = product.name.toLowerCase();
+
+    if (prefs.some((p) => p.includes('bike') || p.includes('superbike') || p.includes('electric') || p.includes('moto')) && lowerName.includes('apex')) {
+      score += 25;
+    }
+    if (prefs.some((p) => p.includes('track') || p.includes('racing') || p.includes('ducati')) && lowerName.includes('ducati')) {
+      score += 25;
+    }
+    if (prefs.some((p) => p.includes('fitness') || p.includes('cycling') || p.includes('cardio')) && (lowerName.includes('peloton') || lowerName.includes('concept2') || lowerName.includes('tarmac'))) {
+      score += 20;
+    }
+    return Math.min(100, Math.max(10, score));
+  }
+
+  compare(products: UniversalProduct[], passport?: Partial<CustomerDecisionPassport>): DynamicComparisonResult {
+    if (products.length === 0) {
+      return {
+        products: [],
+        items: [],
+        keyDifferences: [],
+        overallRecommendation: 'No sports products selected for comparison.',
+        confidence: 50,
+        spokenSummary: 'Please select at least two sports products to compare.',
+      };
+    }
+
+    const items: ComparisonResultItem[] = products.map((p) => {
+      const isElectric = p.name.toLowerCase().includes('apex') || p.name.toLowerCase().includes('electric');
+      const isTrack = p.name.toLowerCase().includes('ducati');
+      const isCycling = p.name.toLowerCase().includes('specialized') || p.name.toLowerCase().includes('trek') || p.name.toLowerCase().includes('canyon');
+
+      const advantages: string[] = [];
+      const disadvantages: string[] = [];
+      let bestFor = 'High-performance sports lifestyle';
+
+      if (isElectric) {
+        advantages.push('Sub-2.6s instant torque, solid-state battery with 354km range, integrated Agora voice helmet audio');
+        disadvantages.push('High-voltage fast-charging infrastructure recommended for long tours');
+        bestFor = 'Eco-conscious moto-sport riders and futuristic urban commuters';
+      } else if (isTrack) {
+        advantages.push('MotoGP championship engine, 215.5 HP high-rpm scream, biplane carbon aerodynamic winglets');
+        disadvantages.push('Aggressive ergonomics and high maintenance track schedule');
+        bestFor = 'Hardcore track enthusiasts and competitive club racers';
+      } else if (isCycling) {
+        advantages.push('Featherweight under 7kg, electronic wireless shifting, wind-tunnel optimized aerodynamic frame');
+        disadvantages.push('Dedicated clip-in road cycling shoes and cycling kit required');
+        bestFor = 'Competitive road cyclists, triathletes, and endurance athletes';
+      } else {
+        advantages.push('Total body cardio conditioning, precision telemetry, connected studio community');
+        disadvantages.push('Requires dedicated floor space in home or private studio');
+        bestFor = 'Home fitness, daily cross-training, and low-impact high-intensity cardio';
+      }
+
+      return {
+        product: p,
+        advantages,
+        disadvantages,
+        bestFor,
+        verdictScore: this.calculateMatchScore(p, passport),
+      };
+    });
+
+    items.sort((a, b) => b.verdictScore - a.verdictScore);
+    const winner = items[0];
+
+    return {
+      products,
+      items,
+      keyDifferences: [
+        {
+          attribute: 'Performance & Architecture',
+          values: Object.fromEntries(products.map((p) => [p.name, String(p.specifications['Peak Power'] || p.specifications['Frame Weight'] || p.specifications['Mechanism'] || 'N/A')])),
+          significance: 'Key power and engineering design metric.',
+        },
+        {
+          attribute: 'Price & Inclusions',
+          values: Object.fromEntries(products.map((p) => [p.name, p.priceFormatted])),
+          significance: 'Capital investment and warranty.',
+        },
+      ],
+      overallRecommendation: `For your athletic goals, the ${winner.product.name} is the optimal machine because of ${winner.bestFor.toLowerCase()}.`,
+      confidence: 90,
+      spokenSummary: `Comparing both: ${winner.product.name} leads for ${winner.bestFor.toLowerCase()}, while ${items[1]?.product.name || 'the alternative'} serves a different athletic focus.`,
+    };
+  }
+
+  getSpecializedQuestions(): string[] {
+    return [
+      'Are you seeking outdoor high-speed performance mobility or indoor connected fitness and cardio?',
+      'Do you prioritize raw electric acceleration and range, or lightweight human-powered carbon cycling?',
+    ];
+  }
+}
+
 // Adapter Registry
 const adapters: Record<string, DomainAdapter> = {
+  sports: new SportsAdapter(),
+  appliances: new ApplianceAdapter(),
   cars: new EVAdapter(),
   laptops: new LaptopAdapter(),
-  appliances: new ApplianceAdapter(),
   phones: new PhoneAdapter(),
 };
 
 export function getDomainAdapter(category: string): DomainAdapter {
   const norm = category.toLowerCase().trim();
+  if (norm.includes('sport') || norm.includes('bike') || norm.includes('cycling') || norm.includes('fitness') || norm.includes('rower') || norm.includes('moto') || norm.includes('track')) {
+    return adapters.sports;
+  }
+  if (norm.includes('appliance') || norm.includes('fridge') || norm.includes('ac') || norm.includes('washer') || norm.includes('kitchen')) {
+    return adapters.appliances;
+  }
   if (norm.includes('car') || norm.includes('vehicle') || norm.includes('auto') || norm.includes('ev')) {
     return adapters.cars;
   }
   if (norm.includes('laptop') || norm.includes('mac') || norm.includes('pc') || norm.includes('computer')) {
     return adapters.laptops;
   }
-  if (norm.includes('appliance') || norm.includes('fridge') || norm.includes('ac') || norm.includes('washer')) {
-    return adapters.appliances;
-  }
   if (norm.includes('phone') || norm.includes('mobile') || norm.includes('smart') || norm.includes('pixel') || norm.includes('galaxy') || norm.includes('iphone')) {
     return adapters.phones;
   }
-  // Default fallback to laptops adapter
-  return adapters.laptops;
+  // Default fallback to sports adapter
+  return adapters.sports;
 }

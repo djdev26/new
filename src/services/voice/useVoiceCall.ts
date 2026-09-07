@@ -1,19 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { VoiceCallState, TranscriptTurn } from '../../types/salespilot';
+import { VoiceCallState } from '../../types/salespilot';
 import { createAgoraAdapter, IAgoraAdapter } from './mockAgora';
 
-interface UseVoiceCallOptions {
+export interface UseVoiceCallOptions {
   onUtteranceSubmitted?: (text: string, speakerName?: string) => Promise<string | void>;
   onInterruption?: (interruptedText: string) => void;
+  onAgentSpokeFirst?: (greeting: string) => void;
   conversationId?: string;
+  autoStart?: boolean;
+  initialGreeting?: string;
 }
 
 export function useVoiceCall(options: UseVoiceCallOptions = {}) {
   const [callState, setCallState] = useState<VoiceCallState>('idle');
   const [isMuted, setIsMuted] = useState(false);
   const [audioLevel, setAudioLevel] = useState<number>(0);
-  const [statusMessage, setStatusMessage] = useState<string>('Ready to start call');
+  const [statusMessage, setStatusMessage] = useState<string>('Initializing autonomous voice agent...');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isAwaitingGesture, setIsAwaitingGesture] = useState<boolean>(false);
+  const [liveInterimTranscript, setLiveInterimTranscript] = useState<string>('');
+  const [activeAISpeech, setActiveAISpeech] = useState<string>('');
 
   const agoraRef = useRef<IAgoraAdapter>(createAgoraAdapter(true));
   const recognitionRef = useRef<any>(null);
@@ -21,6 +27,8 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
   const currentAISpeechRef = useRef<string>('');
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const audioAnimationRef = useRef<number | null>(null);
+  const isConnectingOrActiveRef = useRef<boolean>(false);
+  const autoStartAttemptedRef = useRef<boolean>(false);
 
   // Stop active AI speech
   const stopTTS = useCallback(() => {
@@ -29,6 +37,7 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
     }
     isSpeakingAIRef.current = false;
     currentUtteranceRef.current = null;
+    setActiveAISpeech('');
   }, []);
 
   // Speak AI response with interruption tracking
@@ -49,7 +58,7 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
         } catch (_) {}
 
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.05;
+        utterance.rate = 1.02;
         utterance.pitch = 1.0;
 
         // Try selecting an English natural voice
@@ -66,30 +75,34 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
         isSpeakingAIRef.current = true;
         currentAISpeechRef.current = text;
         currentUtteranceRef.current = utterance;
+        setActiveAISpeech(text);
         setCallState('speaking');
-        setStatusMessage('AI is speaking...');
+        setStatusMessage('AI Host is speaking...');
 
-        // Safety timer to prevent unhandled hang in background tab or browser quirks
+        // Safety timer to prevent unhandled hang in background tab
         const timeoutMs = Math.max(4000, Math.min(25000, text.length * 80));
         const safetyTimer = setTimeout(() => {
           if (isSpeakingAIRef.current) {
             isSpeakingAIRef.current = false;
+            setActiveAISpeech('');
             setCallState('listening');
-            setStatusMessage('Listening to customer...');
+            setStatusMessage('Listening to you... (Speak freely into mic)');
             resolve(true);
           }
         }, timeoutMs);
 
         utterance.onstart = () => {
           isSpeakingAIRef.current = true;
+          setActiveAISpeech(text);
         };
 
         utterance.onend = () => {
           clearTimeout(safetyTimer);
           if (isSpeakingAIRef.current) {
             isSpeakingAIRef.current = false;
+            setActiveAISpeech('');
             setCallState('listening');
-            setStatusMessage('Listening to customer...');
+            setStatusMessage('Listening to you... (Speak freely into mic)');
             resolve(true);
           }
         };
@@ -97,8 +110,9 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
         utterance.onerror = () => {
           clearTimeout(safetyTimer);
           isSpeakingAIRef.current = false;
+          setActiveAISpeech('');
           setCallState('listening');
-          setStatusMessage('Listening to customer...');
+          setStatusMessage('Listening to you... (Speak freely into mic)');
           resolve(false);
         };
 
@@ -107,6 +121,7 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
         } catch (e) {
           clearTimeout(safetyTimer);
           isSpeakingAIRef.current = false;
+          setActiveAISpeech('');
           resolve(false);
         }
       });
@@ -120,6 +135,8 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
       const trimmed = text.trim();
       if (!trimmed) return;
 
+      setLiveInterimTranscript('');
+
       // Check if customer barged in while AI was speaking
       if (isSpeakingAIRef.current || forceInterruption) {
         const interruptedText = currentAISpeechRef.current;
@@ -130,11 +147,11 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
           options.onInterruption(interruptedText);
         }
         // Brief pause to acknowledge interruption
-        await new Promise((r) => setTimeout(r, 450));
+        await new Promise((r) => setTimeout(r, 350));
       }
 
       setCallState('thinking');
-      setStatusMessage('AI is reasoning over CustomerState...');
+      setStatusMessage('AI is reasoning & updating showroom stage...');
 
       try {
         if (options.onUtteranceSubmitted) {
@@ -143,13 +160,13 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
             await speakAI(aiResponse);
           } else {
             setCallState('listening');
-            setStatusMessage('Listening to customer...');
+            setStatusMessage('Listening to you... (Speak freely into mic)');
           }
         }
       } catch (err: any) {
         setErrorMessage(err.message || 'Failed to process utterance');
         setCallState('listening');
-        setStatusMessage('Listening to customer...');
+        setStatusMessage('Listening to you... (Speak freely into mic)');
       }
     },
     [options, speakAI, stopTTS]
@@ -161,7 +178,7 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
 
     const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRec) {
-      console.warn('Web Speech Recognition API is not supported in this browser environment. Direct typing/scripted scenario mode available.');
+      console.warn('Web Speech Recognition API is not supported in this browser. Manual input available.');
       return;
     }
 
@@ -173,6 +190,7 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
 
       recognition.onstart = () => {
         setErrorMessage(null);
+        setIsAwaitingGesture(false);
       };
 
       recognition.onresult = (event: any) => {
@@ -187,8 +205,13 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
           }
         }
 
-        // If customer starts speaking while AI is speaking -> Turn taking cutoff!
-        if ((interimTranscript.length > 3 || finalTranscript.length > 3) && isSpeakingAIRef.current) {
+        const activeTranscript = interimTranscript || finalTranscript;
+        if (activeTranscript.trim().length > 0) {
+          setLiveInterimTranscript(activeTranscript);
+        }
+
+        // Barge-In: If customer speaks while AI is speaking -> Immediate Turn Takeover!
+        if ((interimTranscript.length > 2 || finalTranscript.length > 2) && isSpeakingAIRef.current) {
           stopTTS();
           setCallState('interrupted');
           setStatusMessage('Turn-taking: Customer interrupted AI.');
@@ -200,8 +223,9 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
       };
 
       recognition.onerror = (event: any) => {
-        if (event.error === 'not-allowed') {
-          setErrorMessage('Microphone access denied. You can still test using manual input or the Demo Scenario!');
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          setIsAwaitingGesture(true);
+          setErrorMessage('Microphone access waiting for authorization. Tap anywhere to allow microphone.');
         } else if (event.error !== 'no-speech') {
           console.warn('Speech recognition warning:', event.error);
         }
@@ -209,7 +233,7 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
 
       recognition.onend = () => {
         // Auto-restart if call is still active
-        if (callState !== 'idle' && callState !== 'ended' && recognitionRef.current) {
+        if (isConnectingOrActiveRef.current && recognitionRef.current) {
           try {
             recognitionRef.current.start();
           } catch (_) {}
@@ -220,34 +244,84 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
     } catch (e) {
       console.warn('Could not initialize speech recognition:', e);
     }
-  }, [callState, processCustomerUtterance, stopTTS]);
+  }, [processCustomerUtterance, stopTTS]);
 
-  // Start Voice Call
-  const startCall = useCallback(async () => {
-    setErrorMessage(null);
-    setCallState('connecting');
-    setStatusMessage('Negotiating Agora RTC channel & speech pipeline...');
-
-    try {
-      await agoraRef.current.join(`room-${Date.now()}`);
-      initSpeechRecognition();
-
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch (_) {}
+  // Start Voice Call with Auto Microphone & Proactive Invitation
+  const startCall = useCallback(
+    async (customGreeting?: string) => {
+      if (isConnectingOrActiveRef.current && (callState === 'speaking' || callState === 'listening')) {
+        return;
       }
 
-      setCallState('listening');
-      setStatusMessage('Listening to customer... (Speak into mic or type below)');
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Call failed to connect');
-      setCallState('idle');
-    }
-  }, [initSpeechRecognition]);
+      setErrorMessage(null);
+      setCallState('connecting');
+      isConnectingOrActiveRef.current = true;
+      setStatusMessage('Requesting microphone & initializing Agora voice pipeline...');
+
+      try {
+        // 1. Proactively request browser microphone permission
+        if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Microphone authorized
+            stream.getAudioTracks().forEach((track) => {
+              track.enabled = true;
+            });
+          } catch (mediaErr: any) {
+            console.warn('Microphone permission query:', mediaErr);
+            if (mediaErr.name === 'NotAllowedError' || mediaErr.name === 'PermissionDeniedError') {
+              setIsAwaitingGesture(true);
+              setErrorMessage('Microphone access blocked. Click the microphone icon in your browser address bar or tap to allow.');
+              setCallState('idle');
+              isConnectingOrActiveRef.current = false;
+              return;
+            }
+          }
+        }
+
+        await agoraRef.current.join(`room-${Date.now()}`);
+        initSpeechRecognition();
+
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.start();
+          } catch (_) {}
+        }
+
+        setIsAwaitingGesture(false);
+
+        // 2. Proactive AI Welcome Invitation (AI speaks first)
+        const defaultWelcome =
+          "Welcome to our showroom! I'm your AI sales pilot. Great to have you here — what's your name, and what are you looking for today?";
+        const greetingToSpeak =
+          customGreeting !== undefined
+            ? customGreeting
+            : options.initialGreeting !== undefined
+            ? options.initialGreeting
+            : defaultWelcome;
+
+        if (greetingToSpeak && greetingToSpeak.trim().length > 0) {
+          if (options.onAgentSpokeFirst) {
+            options.onAgentSpokeFirst(greetingToSpeak);
+          }
+          await speakAI(greetingToSpeak);
+        } else {
+          setCallState('listening');
+          setStatusMessage('Listening to you... (Speak freely into mic)');
+        }
+      } catch (err: any) {
+        setErrorMessage(err.message || 'Call failed to connect');
+        setCallState('idle');
+        isConnectingOrActiveRef.current = false;
+        setIsAwaitingGesture(true);
+      }
+    },
+    [callState, initSpeechRecognition, options, speakAI]
+  );
 
   // End Voice Call
   const endCall = useCallback(async () => {
+    isConnectingOrActiveRef.current = false;
     stopTTS();
     if (recognitionRef.current) {
       try {
@@ -256,7 +330,9 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
     }
     await agoraRef.current.leave();
     setCallState('ended');
-    setStatusMessage('Call ended. CustomerState saved.');
+    setStatusMessage('Voice agent paused. Tap to restart anytime.');
+    setActiveAISpeech('');
+    setLiveInterimTranscript('');
   }, [stopTTS]);
 
   // Toggle Mute
@@ -275,13 +351,42 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
     }
   }, [isMuted]);
 
+  // Auto-Start & Global Gesture Fallback Effect
+  useEffect(() => {
+    const autoStartEnabled = options.autoStart !== false;
+    if (!autoStartEnabled || autoStartAttemptedRef.current) return;
+    autoStartAttemptedRef.current = true;
+
+    // 1. Immediately attempt auto-connect & mic authorization
+    startCall().catch(() => {
+      setIsAwaitingGesture(true);
+    });
+
+    // 2. Register a one-time global user gesture listener so ANY tap on the screen starts the call immediately
+    const handleOneTimeGesture = () => {
+      if (!isConnectingOrActiveRef.current) {
+        startCall().catch(() => {});
+      }
+      window.removeEventListener('pointerdown', handleOneTimeGesture);
+      window.removeEventListener('keydown', handleOneTimeGesture);
+    };
+
+    window.addEventListener('pointerdown', handleOneTimeGesture, { once: true });
+    window.addEventListener('keydown', handleOneTimeGesture, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', handleOneTimeGesture);
+      window.removeEventListener('keydown', handleOneTimeGesture);
+    };
+  }, [options.autoStart, startCall]);
+
   // Simulated waveform animation based on call state
   useEffect(() => {
     const updateLevels = () => {
       if (callState === 'speaking') {
         setAudioLevel(45 + Math.floor(Math.random() * 50));
       } else if (callState === 'listening' && !isMuted) {
-        setAudioLevel(15 + Math.floor(Math.random() * 25));
+        setAudioLevel(15 + Math.floor(Math.random() * 30));
       } else if (callState === 'thinking') {
         setAudioLevel(20 + Math.floor(Math.random() * 20));
       } else {
@@ -299,6 +404,7 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      isConnectingOrActiveRef.current = false;
       stopTTS();
       if (recognitionRef.current) {
         try {
@@ -314,6 +420,9 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
     audioLevel,
     statusMessage,
     errorMessage,
+    isAwaitingGesture,
+    liveInterimTranscript,
+    activeAISpeech,
     startCall,
     endCall,
     toggleMute,
