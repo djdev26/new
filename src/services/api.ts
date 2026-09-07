@@ -17,14 +17,29 @@ export interface ConversationTurnResponse {
   quote: QuoteResult;
   action: RecommendedAction;
   agentResponse: string;
+  analysis?: any;
 }
 
 export const apiService = {
-  async sendMessage(conversationId: string, text: string): Promise<ConversationTurnResponse> {
+  async sendMessage(
+    conversationId: string,
+    text: string,
+    meta?: {
+      speakerName?: string;
+      speakerId?: string;
+      activeSpeakerId?: string;
+      activeSpeakerName?: string;
+    }
+  ): Promise<ConversationTurnResponse> {
     const res = await fetch('/api/conversation/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conversation_id: conversationId, text, speaker: 'customer' }),
+      body: JSON.stringify({
+        conversation_id: conversationId,
+        text,
+        speaker: 'customer',
+        ...meta,
+      }),
     });
     if (!res.ok) throw new Error(`Server returned ${res.status}`);
     return res.json();
@@ -116,9 +131,19 @@ export const apiService = {
     return res.json();
   },
 
-  async getAnalytics(): Promise<AnalyticsData> {
-    const res = await fetch('/api/analytics');
-    if (!res.ok) throw new Error('Failed to fetch analytics');
+  async getCustomerSessions(): Promise<{ activeSessionId: string; sessions: any[] }> {
+    const res = await fetch('/api/customers/sessions');
+    if (!res.ok) throw new Error('Failed to fetch sessions');
+    return res.json();
+  },
+
+  async switchActiveSession(sessionId: string): Promise<{ success: boolean; session?: any; resumePrompt?: string }> {
+    const res = await fetch('/api/customers/switch-active', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId }),
+    });
+    if (!res.ok) throw new Error('Failed to switch active session');
     return res.json();
   },
 };

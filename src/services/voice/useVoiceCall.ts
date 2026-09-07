@@ -3,7 +3,7 @@ import { VoiceCallState, TranscriptTurn } from '../../types/salespilot';
 import { createAgoraAdapter, IAgoraAdapter } from './mockAgora';
 
 interface UseVoiceCallOptions {
-  onUtteranceSubmitted?: (text: string) => Promise<string | void>;
+  onUtteranceSubmitted?: (text: string, speakerName?: string) => Promise<string | void>;
   onInterruption?: (interruptedText: string) => void;
   conversationId?: string;
 }
@@ -90,7 +90,7 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
 
   // Trigger customer utterance into the AI pipeline
   const processCustomerUtterance = useCallback(
-    async (text: string, forceInterruption: boolean = false) => {
+    async (text: string, forceInterruption: boolean = false, speakerName?: string) => {
       const trimmed = text.trim();
       if (!trimmed) return;
 
@@ -112,7 +112,7 @@ export function useVoiceCall(options: UseVoiceCallOptions = {}) {
 
       try {
         if (options.onUtteranceSubmitted) {
-          const aiResponse = await options.onUtteranceSubmitted(trimmed);
+          const aiResponse = await options.onUtteranceSubmitted(trimmed, speakerName);
           if (aiResponse && typeof aiResponse === 'string') {
             await speakAI(aiResponse);
           } else {

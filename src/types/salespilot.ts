@@ -164,7 +164,7 @@ export interface AnalyticsData {
   stageConversionFunnel: Array<{ stage: string; count: number }>;
 }
 
-export type ShowroomId = 'bike' | 'laptop' | 'appliances';
+export type ShowroomId = 'laptops' | 'appliances' | 'cars';
 
 export interface ShowroomHotspot {
   id: string;
@@ -173,6 +173,32 @@ export interface ShowroomHotspot {
   position: [number, number, number];
   details: string;
   metric: string;
+}
+
+export interface ProductCardSpec {
+  label: string;
+  value: string;
+}
+
+export interface ShowroomProduct {
+  id: string;
+  showroomId: ShowroomId;
+  name: string;
+  brand: string;
+  category: string;
+  price: number;
+  priceFormatted: string;
+  tagline: string;
+  description: string;
+  badge: string;
+  has3dModel: boolean;
+  rating: number;
+  warranty: string;
+  colors: { name: string; hex: string }[];
+  metrics: { label: string; value: string }[];
+  specs: ProductCardSpec[];
+  hotspots: ShowroomHotspot[];
+  officialSourceUrl?: string;
 }
 
 export interface ShowroomItem {
@@ -189,10 +215,13 @@ export interface ShowroomItem {
   ambientColor: string;
   recommendedFor: string;
   voiceTriggers: string[];
+  products: ShowroomProduct[];
 }
 
 export type AgenticToolType = 
   | 'switch_showroom' 
+  | 'select_product'
+  | 'compare_products'
   | 'negotiate_discount'
   | 'make_payment' 
   | 'book_calendar' 

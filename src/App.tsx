@@ -18,10 +18,14 @@ import { DemoScenarioRunner, DEMO_STEPS, DemoStep } from './components/DemoScena
 // New Agora Conversational AI & Autonomous Showroom Components
 import { ShowroomCanvas3D } from './components/ShowroomCanvas3D';
 import { ShowroomDrawer } from './components/ShowroomDrawer';
+import { ProductCatalogSection } from './components/ProductCatalogSection';
+import { ProductDetailModal } from './components/ProductDetailModal';
+import { ProductCompareModal } from './components/ProductCompareModal';
+import { MultiCustomerPriorityBar, CustomerSessionUI } from './components/MultiCustomerPriorityBar';
 import { AgoraConversationalPanel } from './components/AgoraConversationalPanel';
 import { AgenticActionConsole } from './components/AgenticActionConsole';
 import { PaymentCheckoutModal } from './components/PaymentCheckoutModal';
-import { SHOWROOMS_DATA, SHOWROOM_KEYS } from './data/showrooms';
+import { SHOWROOMS_DATA, SHOWROOM_KEYS, getAllProducts, getProductById } from './data/showrooms';
 
 import { useVoiceCall } from './services/voice/useVoiceCall';
 import { apiService, ConversationTurnResponse } from './services/api';
@@ -57,18 +61,54 @@ export default function App() {
     {
       id: 'init-1',
       speaker: 'agent',
-      text: "Hello Priya! Welcome to SalesPilot AI with full Agora Voice AI. I'm your autonomous sales representative. I can guide you through our 3D showrooms for electric superbikes, neural laptops, or smart appliances, negotiate bulk pricing, or take instant orders. What would you like to explore?",
+      text: "Hello Priya! Welcome to SalesPilot AI. I'm your autonomous showroom sales advisor. I can walk you through our 3D interactive showrooms for performance sports cars, neural laptops, or connected smart appliances, handle trade-offs, and customize configurations on the fly. What catches your eye today?",
       timestamp: '10:00 AM',
     },
   ]);
 
   const [intentResult, setIntentResult] = useState<IntentResult | null>(null);
   const [objectionResult, setObjectionResult] = useState<ObjectionResult | null>(null);
-  const [quoteResult, setQuoteResult] = useState<QuoteResult>(() => calculateQuote(10, 'EV Flagship'));
+  const [quoteResult, setQuoteResult] = useState<QuoteResult>(() => calculateQuote(1, 'Supercars & SUVs'));
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
 
-  // Autonomous Showroom State
-  const [currentShowroomId, setCurrentShowroomId] = useState<ShowroomId>('bike');
+  // Multi-Customer Concurrency & Priority State (Sections 18 & 19)
+  const [activeSessionId, setActiveSessionId] = useState<string>('cust-priya');
+  const [customerSessions, setCustomerSessions] = useState<CustomerSessionUI[]>([
+    {
+      id: 'cust-priya',
+      name: 'Priya Sharma',
+      role: 'VP of Engineering',
+      company: 'ApexScale Corp',
+      status: 'active',
+      memorySnippet: 'Evaluating Dell XPS 16 vs MacBook Pro 16 & Porsche 911 executive fleet.',
+      state: customerState,
+    },
+    {
+      id: 'cust-rahul',
+      name: 'Rahul Verma',
+      role: 'Fleet Operations Director',
+      company: 'Velocity Logistics',
+      status: 'waiting',
+      memorySnippet: 'Interested in Porsche 911 Carrera and Land Rover Range Rover SV.',
+      state: customerState,
+    },
+    {
+      id: 'cust-ananya',
+      name: 'Ananya Roy',
+      role: 'Smart Living Architect',
+      company: 'Modern Living Residences',
+      status: 'waiting',
+      memorySnippet: 'Wants 630L LG InstaView and Dyson Air Purifier bundle for penthouses.',
+      state: customerState,
+    },
+  ]);
+
+  // Autonomous Showroom State (3 Showrooms: cars, laptops, appliances)
+  const [currentShowroomId, setCurrentShowroomId] = useState<ShowroomId>('cars');
+  const [selectedProductId, setSelectedProductId] = useState<string>('car-1');
+  const [comparedProducts, setComparedProducts] = useState<any[]>([]);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState<boolean>(false);
+  const [detailProduct, setDetailProduct] = useState<any | null>(null);
   const [selectedHotspot, setSelectedHotspot] = useState<ShowroomHotspot | null>(null);
   const [lastAutonomousSwitch, setLastAutonomousSwitch] = useState<{
     showroomName: string;
@@ -79,7 +119,7 @@ export default function App() {
   // Negotiation & Checkout State
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [negotiatedDiscount, setNegotiatedDiscount] = useState<number>(15);
-  const [orderQuantity, setOrderQuantity] = useState<number>(10);
+  const [orderQuantity, setOrderQuantity] = useState<number>(1);
 
   // Agora Real-Time Voice AI Pipeline Config
   const [pipelineConfig, setPipelineConfig] = useState<AgoraPipelineConfig>({
@@ -104,10 +144,10 @@ export default function App() {
       id: 'tool-init',
       toolName: 'switch_showroom',
       label: 'Autonomous 3D Mount',
-      arguments: { showroomId: 'bike', model: 'Apex Cyber-Pulse' },
+      arguments: { showroomId: 'cars', model: 'Porsche 911 Carrera' },
       timestamp: '10:00:02 AM',
       status: 'success',
-      output: 'Mounted 3D Electric Superbike (Veloce 800) with dual 85kW motors & Agora noise-cancelling cockpit.',
+      output: 'Mounted 3D Porsche 911 Carrera (992.2) with 3.0L twin-turbo boxer engine & PASM suspension.',
       durationMs: 72,
     },
   ]);
@@ -272,93 +312,157 @@ export default function App() {
     }
   };
 
+  // Product Selection & 3D Mounting Handler
+  const handleSelectProductFor3D = useCallback(
+    (product: any) => {
+      setSelectedProductId(product.id);
+      if (product.showroomId !== currentShowroomId) {
+        setCurrentShowroomId(product.showroomId);
+      }
+      logToolCall(
+        'select_product',
+        `Mounted 3D Model: ${product.name}`,
+        { productId: product.id, showroomId: product.showroomId },
+        `Rendered interactive 3D model for ${product.name} with key performance badges and technical specs. Price: ${product.priceFormatted}.`
+      );
+      showToast(`Mounted 3D Model: ${product.name}`);
+    },
+    [currentShowroomId, logToolCall]
+  );
+
+  const handleToggleCompareProduct = useCallback((product: any) => {
+    setComparedProducts((prev) => {
+      const exists = prev.some((p) => p.id === product.id);
+      if (exists) {
+        showToast(`Removed ${product.name} from comparison.`);
+        return prev.filter((p) => p.id !== product.id);
+      }
+      if (prev.length >= 3) {
+        showToast('Maximum 3 models can be compared simultaneously.');
+        return prev;
+      }
+      showToast(`Added ${product.name} to side-by-side comparison.`);
+      return [...prev, product];
+    });
+  }, []);
+
+  const handleRemoveComparedProduct = useCallback((id: string) => {
+    setComparedProducts((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const handleBuyProduct = useCallback((product: any) => {
+    setSelectedProductId(product.id);
+    setIsCheckoutModalOpen(true);
+    logToolCall(
+      'make_payment',
+      `One-Click Checkout Voucher: ${product.name}`,
+      { product: product.name, price: product.priceFormatted },
+      'Presented zero-risk checkout modal with 30-day ironclad guarantee.'
+    );
+  }, [logToolCall]);
+
+  // Multi-Customer Session Switcher
+  const handleSwitchCustomerSession = useCallback(async (sessionId: string) => {
+    try {
+      const res = await apiService.switchActiveSession(sessionId);
+      if (res.success && res.session) {
+        setActiveSessionId(sessionId);
+        setCustomerSessions((prev) =>
+          prev.map((s) => ({
+            ...s,
+            status: s.id === sessionId ? 'active' : 'waiting',
+          }))
+        );
+        showToast(`Switched active customer focus to: ${res.session.name}`);
+
+        if (res.resumePrompt) {
+          const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          setTranscript((prev) => [
+            ...prev,
+            {
+              id: `resume-${Date.now()}`,
+              speaker: 'agent',
+              text: res.resumePrompt!,
+              timestamp,
+            },
+          ]);
+        }
+      }
+    } catch (err) {
+      console.warn('Session switch error:', err);
+    }
+  }, []);
+
+  // Simulate Multi-Customer Interruption (Polite Deferral)
+  const handleSimulateInterruption = useCallback(
+    async (interrupterName: string, utteranceText: string) => {
+      showToast(`Interruption incoming from secondary customer: ${interrupterName}`);
+      await voice.processCustomerUtterance(utteranceText, false, interrupterName);
+    },
+    [voice]
+  );
+
   // Handler when customer speaks or sends utterance
   const handleProcessUtterance = useCallback(
-    async (text: string): Promise<string | void> => {
+    async (text: string, speakerName?: string): Promise<string | void> => {
       setIsProcessingTurn(true);
-      const lower = text.toLowerCase();
+      const activeSession = customerSessions.find((s) => s.id === activeSessionId) || customerSessions[0];
+      const effectiveSpeakerName = speakerName || activeSession.name;
+      const isInterrupter = speakerName && speakerName !== activeSession.name;
 
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const customerTurnId = `turn-${Date.now()}`;
 
-      // 1. Append customer turn to transcript immediately
+      // 1. Append customer turn to transcript immediately with speaker label
       setTranscript((prev) => [
         ...prev,
         {
           id: customerTurnId,
           speaker: 'customer',
-          text,
+          text: isInterrupter ? `[${effectiveSpeakerName}]: "${text}"` : text,
           timestamp,
         },
       ]);
 
-      // 2. Autonomous Showroom Intent Detection from Speech
-      if (
-        lower.includes('bike') ||
-        lower.includes('superbike') ||
-        lower.includes('motorcycle') ||
-        lower.includes('ebike') ||
-        lower.includes('two wheeler')
-      ) {
-        handleSelectShowroom('bike', 'agent');
-      } else if (
-        lower.includes('laptop') ||
-        lower.includes('aerobook') ||
-        lower.includes('computer') ||
-        lower.includes('pc') ||
-        lower.includes('notebook')
-      ) {
-        handleSelectShowroom('laptop', 'agent');
-      } else if (
-        lower.includes('appliance') ||
-        lower.includes('appliances') ||
-        lower.includes('fridge') ||
-        lower.includes('refrigerator') ||
-        lower.includes('kitchen')
-      ) {
-        handleSelectShowroom('appliances', 'agent');
-      }
-
-      // 3. Autonomous Negotiation & Closer Psychology Detection
-      if (
-        lower.includes("shouldn't buy") ||
-        lower.includes("should not buy") ||
-        lower.includes("won't buy") ||
-        lower.includes("not buying") ||
-        lower.includes("hesitant") ||
-        lower.includes("too expensive") ||
-        lower.includes("cheaper") ||
-        lower.includes("discount") ||
-        lower.includes("negotiate") ||
-        lower.includes("better deal")
-      ) {
-        handleNegotiateDiscount(20, 'Addressed reluctance with executive discount & 30-day ironclad guarantee');
-      }
-
-      // 4. Autonomous Checkout Intent Detection
-      if (
-        lower.includes('buy now') ||
-        lower.includes('order now') ||
-        lower.includes('checkout') ||
-        lower.includes('process payment') ||
-        lower.includes('reserve now') ||
-        lower.includes('lock this in')
-      ) {
-        setIsCheckoutModalOpen(true);
-        logToolCall('make_payment', 'Autonomous Checkout Initiated', { utterance: text }, 'Presented one-click checkout modal to customer.');
-      }
-
       try {
-        // 5. Call real full-stack API endpoint
+        // 2. Call real full-stack API endpoint with speaker metadata
         const response: ConversationTurnResponse = await apiService.sendMessage(
           conversationId,
-          text
+          text,
+          {
+            speakerName: effectiveSpeakerName,
+            activeSpeakerName: activeSession.name,
+            activeSpeakerId: activeSession.id,
+          }
         );
 
-        // 6. Update all reactive panels
-        setCustomerState(response.state);
-        setIntentResult(response.intent);
-        setObjectionResult(response.objections);
+        // 3. Autonomous Website Control & Action Dispatcher
+        if (response.analysis) {
+          const { targetShowroom, targetProductId, actionRequired } = response.analysis;
+          if (targetShowroom && targetShowroom !== currentShowroomId) {
+            handleSelectShowroom(targetShowroom, 'agent');
+          }
+          if (targetProductId) {
+            setSelectedProductId(targetProductId);
+          }
+          if (actionRequired === 'negotiate') {
+            handleNegotiateDiscount(20, 'Addressed reluctance with executive discount & 30-day ironclad guarantee');
+          } else if (actionRequired === 'checkout') {
+            setIsCheckoutModalOpen(true);
+          } else if (actionRequired === 'defer_interrupter') {
+            logToolCall(
+              'trigger_workflow',
+              'Multi-Customer Priority Arbitration',
+              { interrupter: effectiveSpeakerName, activeCustomer: activeSession.name },
+              `Politely deferred ${effectiveSpeakerName} while maintaining active priority session with ${activeSession.name}.`
+            );
+          }
+        }
+
+        // 4. Update all reactive panels
+        if (response.state) setCustomerState(response.state);
+        if (response.intent) setIntentResult(response.intent);
+        if (response.objections) setObjectionResult(response.objections);
 
         // Deduct 1 Agora conversation minute
         setPipelineConfig((prev) => ({
@@ -366,7 +470,7 @@ export default function App() {
           freeMinutesRemaining: Math.max(0, prev.freeMinutesRemaining - 1),
         }));
 
-        // 7. Append AI Agent turn to transcript
+        // 5. Append AI Agent turn to transcript
         const agentTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         setTranscript((prev) => [
           ...prev,
@@ -383,10 +487,9 @@ export default function App() {
       } catch (error) {
         console.error('Error submitting utterance:', error);
         setIsProcessingTurn(false);
-        showToast('API processing error. Retrying with local fallback.');
       }
     },
-    [conversationId, handleSelectShowroom, handleNegotiateDiscount, logToolCall]
+    [conversationId, customerSessions, activeSessionId, currentShowroomId, handleSelectShowroom, handleNegotiateDiscount, logToolCall]
   );
 
   // Handler when customer interrupts active AI speech (Barge-In)
@@ -567,6 +670,15 @@ export default function App() {
               qualificationScore={customerState.qualification_score}
             />
 
+            {/* Multi-Customer Concurrency & Priority Bar (Sections 18 & 19) */}
+            <MultiCustomerPriorityBar
+              sessions={customerSessions}
+              activeSessionId={activeSessionId}
+              onSwitchSession={handleSwitchCustomerSession}
+              onSimulateInterruption={handleSimulateInterruption}
+              isProcessing={isProcessingTurn}
+            />
+
             {/* Autonomous Showroom Navigator Selector */}
             <ShowroomDrawer
               currentShowroomId={currentShowroomId}
@@ -582,6 +694,18 @@ export default function App() {
               isAudioActive={voice.callState === 'listening'}
               audioLevel={voice.audioLevel}
               isAiSpeaking={voice.callState === 'speaking'}
+            />
+
+            {/* 10-Product Interactive Catalog Grid for Active Showroom */}
+            <ProductCatalogSection
+              showroom={currentShowroom}
+              selectedProductId={selectedProductId}
+              comparedProducts={comparedProducts}
+              onSelectProductFor3D={handleSelectProductFor3D}
+              onViewProductDetails={(p) => setDetailProduct(p)}
+              onToggleCompareProduct={handleToggleCompareProduct}
+              onOpenCompareModal={() => setIsCompareModalOpen(true)}
+              onBuyProduct={handleBuyProduct}
             />
 
             {/* Agora Conversational Pipeline Telemetry & Free Minutes */}
@@ -673,6 +797,25 @@ export default function App() {
         quantity={orderQuantity}
         discountPercentage={negotiatedDiscount}
         onPaymentSuccess={handlePaymentSuccess}
+      />
+
+      {/* Product Detail Inspection Modal */}
+      <ProductDetailModal
+        product={detailProduct}
+        isOpen={Boolean(detailProduct)}
+        onClose={() => setDetailProduct(null)}
+        onMount3D={handleSelectProductFor3D}
+        onBuyNow={handleBuyProduct}
+      />
+
+      {/* Product Side-by-Side Comparison Modal */}
+      <ProductCompareModal
+        products={comparedProducts}
+        isOpen={isCompareModalOpen}
+        onClose={() => setIsCompareModalOpen(false)}
+        onRemoveProduct={handleRemoveComparedProduct}
+        onMount3D={handleSelectProductFor3D}
+        onBuyNow={handleBuyProduct}
       />
 
       {/* CRM Modal */}

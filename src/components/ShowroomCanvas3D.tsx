@@ -253,9 +253,10 @@ export const ShowroomCanvas3D: React.FC<ShowroomCanvas3DProps> = ({
     const accentColor = new THREE.Color(showroom.accentColor);
 
     switch (showroom.id) {
-      case 'bike':
-        buildElectricBike(modelGroup, accentColor, wireframeMode);
+      case 'cars':
+        buildSportsCar(modelGroup, accentColor, wireframeMode);
         break;
+      case 'laptops':
       case 'laptop':
         buildNeuralLaptop(modelGroup, accentColor, wireframeMode);
         break;
@@ -269,7 +270,151 @@ export const ShowroomCanvas3D: React.FC<ShowroomCanvas3DProps> = ({
     targetCameraRotRef.current = { x: 0.25, y: -0.6, radius: 4.8 };
   }, [showroom.id, wireframeMode]);
 
-  // Model Builder 1: Apex Cyber-Pulse Electric Superbike
+  // Model Builder 1: Performance Sports Car (Porsche 911 / Luxury SUV)
+  const buildSportsCar = (group: THREE.Group, accentColor: THREE.Color, wireframe: boolean) => {
+    const wheelList: THREE.Mesh[] = [];
+
+    // Main Sleek Sports Car Body (Chassis)
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: accentColor,
+      metalness: 0.9,
+      roughness: 0.15,
+      wireframe,
+    });
+
+    // Lower Chassis Floor & Diffuser
+    const chassisGeo = new THREE.BoxGeometry(3.6, 0.45, 1.7);
+    const chassis = new THREE.Mesh(chassisGeo, bodyMat);
+    chassis.position.set(0, -0.2, 0);
+    group.add(chassis);
+
+    // Aerodynamic Sloping Cabin / Roofline (Greenhouse)
+    const cabinGeo = new THREE.BoxGeometry(2.0, 0.55, 1.35);
+    const cabinMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a,
+      metalness: 0.95,
+      roughness: 0.1,
+      wireframe,
+    });
+    const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+    cabin.position.set(-0.2, 0.25, 0);
+    group.add(cabin);
+
+    // Front Sloping Hood / Bonnet
+    const hoodGeo = new THREE.BoxGeometry(1.2, 0.25, 1.6);
+    const hood = new THREE.Mesh(hoodGeo, bodyMat);
+    hood.position.set(1.2, -0.05, 0);
+    hood.rotation.z = -0.12;
+    group.add(hood);
+
+    // Tinted Windshield Glass
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      metalness: 0.9,
+      roughness: 0.05,
+      transparent: true,
+      opacity: 0.75,
+    });
+    const windshieldGeo = new THREE.PlaneGeometry(1.3, 0.7);
+    const windshield = new THREE.Mesh(windshieldGeo, glassMat);
+    windshield.rotation.y = Math.PI / 2;
+    windshield.rotation.x = -Math.PI / 3.8;
+    windshield.position.set(0.75, 0.25, 0);
+    group.add(windshield);
+
+    // Rear Sloping Fastback Glass
+    const rearGlass = new THREE.Mesh(windshieldGeo, glassMat);
+    rearGlass.rotation.y = -Math.PI / 2;
+    rearGlass.rotation.x = -Math.PI / 3.5;
+    rearGlass.position.set(-1.15, 0.22, 0);
+    group.add(rearGlass);
+
+    // Aerodynamic Rear Wing / Spoiler
+    const spoilerWingGeo = new THREE.BoxGeometry(0.3, 0.04, 1.6);
+    const spoiler = new THREE.Mesh(spoilerWingGeo, cabinMat);
+    spoiler.position.set(-1.75, 0.28, 0);
+    group.add(spoiler);
+
+    // Twin Exhaust Tips (Stainless Chrome)
+    const exhaustMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.98, roughness: 0.1 });
+    [-0.35, 0.35].forEach((z) => {
+      const tipGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.25, 16);
+      const tip = new THREE.Mesh(tipGeo, exhaustMat);
+      tip.rotation.z = Math.PI / 2;
+      tip.position.set(-1.85, -0.3, z);
+      group.add(tip);
+    });
+
+    // Iconic Front Dual Oval Headlights (LED Daytime Glow)
+    [-0.55, 0.55].forEach((z) => {
+      const lightGeo = new THREE.SphereGeometry(0.12, 16, 16);
+      const lightMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0x93c5fd,
+        emissiveIntensity: 1.2,
+      });
+      const light = new THREE.Mesh(lightGeo, lightMat);
+      light.position.set(1.75, -0.05, z);
+      group.add(light);
+    });
+
+    // Rear Continuous LED Lightbar (Porsche 911 light strip)
+    const lightbarGeo = new THREE.BoxGeometry(0.05, 0.06, 1.55);
+    const lightbarMat = new THREE.MeshStandardMaterial({
+      color: 0xdc2626,
+      emissive: 0xef4444,
+      emissiveIntensity: 1.5,
+    });
+    const lightbar = new THREE.Mesh(lightbarGeo, lightbarMat);
+    lightbar.position.set(-1.82, 0.02, 0);
+    group.add(lightbar);
+
+    // 4 Performance Alloy Wheels with Rubber Tires & Yellow Calipers
+    const makeCarWheel = (x: number, y: number, z: number) => {
+      const wheelGroup = new THREE.Group();
+      wheelGroup.position.set(x, y, z);
+
+      // Tire
+      const tireGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.22, 24);
+      const tireMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9, wireframe });
+      const tire = new THREE.Mesh(tireGeo, tireMat);
+      tire.rotation.x = Math.PI / 2;
+      wheelGroup.add(tire);
+
+      // Rim (Satin Titanium Alloy)
+      const rimGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.24, 20);
+      const rimMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.95, roughness: 0.2 });
+      const rim = new THREE.Mesh(rimGeo, rimMat);
+      rim.rotation.x = Math.PI / 2;
+      wheelGroup.add(rim);
+
+      // Center-lock nut
+      const nutGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.26, 12);
+      const nutMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, metalness: 0.8 });
+      const nut = new THREE.Mesh(nutGeo, nutMat);
+      nut.rotation.x = Math.PI / 2;
+      wheelGroup.add(nut);
+
+      // Yellow Performance Brake Caliper
+      const caliperGeo = new THREE.BoxGeometry(0.12, 0.16, 0.25);
+      const caliperMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.6 });
+      const caliper = new THREE.Mesh(caliperGeo, caliperMat);
+      caliper.position.set(0.15, 0.12, 0);
+      wheelGroup.add(caliper);
+
+      group.add(wheelGroup);
+      wheelList.push(tire);
+    };
+
+    // 4 Wheel placements
+    makeCarWheel(1.15, -0.4, 0.85);   // Front Left
+    makeCarWheel(1.15, -0.4, -0.85);  // Front Right
+    makeCarWheel(-1.15, -0.4, 0.85);  // Rear Left
+    makeCarWheel(-1.15, -0.4, -0.85); // Rear Right
+
+    dynamicMeshesRef.current.wheels = wheelList;
+  };
+
   const buildElectricBike = (group: THREE.Group, accentColor: THREE.Color, wireframe: boolean) => {
     const wheelList: THREE.Mesh[] = [];
 

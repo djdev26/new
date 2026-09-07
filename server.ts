@@ -77,12 +77,26 @@ app.get('/api/health', (req, res) => {
 // 2. Process conversation message (Core Orchestration Endpoint)
 app.post('/api/conversation/message', async (req, res) => {
   try {
-    const { conversation_id = 'default-session', speaker = 'customer' } = req.body;
+    const {
+      conversation_id = 'default-session',
+      speaker = 'customer',
+      speakerName = 'Priya',
+      speakerId = 'customer-primary',
+      activeSpeakerId = 'customer-primary',
+      activeSpeakerName = 'Priya',
+    } = req.body;
     const text = req.body.text || req.body.utterance || '';
 
     if (!text) {
       return res.status(400).json({ error: 'Text turn is required' });
     }
+
+    const speakerMeta = {
+      speakerId,
+      speakerName,
+      activeSpeakerId,
+      activeSpeakerName,
+    };
 
     // Step 1: Detect Intent & Objections
     const [intentResult, objectionResult] = await Promise.all([
@@ -105,12 +119,17 @@ app.post('/api/conversation/message', async (req, res) => {
     // Step 4: Calculate Dynamic Quote
     const quote = calculateQuote(updatedState.user_count, updatedState.product_interest);
 
-    // Step 5: Generate AI Agent Response Dialogue
+    // Step 5: Natural Conversation & Tone Analysis
+    const { generateNaturalAgentTurn } = await import('./src/server/naturalConversationEngine');
+    const turnAnalysis = generateNaturalAgentTurn(text, updatedState, speakerMeta);
+
+    // Step 6: Generate AI Agent Response Dialogue
     const agentResponse = await generateAgentResponse(
       text,
       updatedState,
       intentResult,
-      objectionResult
+      objectionResult,
+      speakerMeta
     );
 
     res.json({
@@ -119,7 +138,8 @@ app.post('/api/conversation/message', async (req, res) => {
       objections: objectionResult,
       quote,
       action: nextAction,
-      agentResponse,
+      agentResponse: agentResponse || turnAnalysis.agentSpeech,
+      analysis: turnAnalysis,
     });
   } catch (error: any) {
     console.error('Error processing conversation message:', error);
@@ -127,7 +147,28 @@ app.post('/api/conversation/message', async (req, res) => {
   }
 });
 
-// 3. Customer State Endpoints
+// 3. Multi-Customer Priority & Concurrency Endpoints (Sections 18 & 19)
+import { multiCustomerManager } from './src/server/multiCustomerManager';
+
+app.get('/api/customers/sessions', (req, res) => {
+  const sessions = multiCustomerManager.getAllSessions();
+  const activeSession = multiCustomerManager.getActiveSession();
+  res.json({
+    activeSessionId: activeSession.id,
+    sessions,
+  });
+});
+
+app.post('/api/customers/switch-active', (req, res) => {
+  const { sessionId } = req.body;
+  const result = multiCustomerManager.setActiveSession(sessionId);
+  if (!result.success) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  res.json(result);
+});
+
+// 4. Customer State Endpoints
 app.get('/api/customer/:id', (req, res) => {
   const state = getCustomerState(req.params.id);
   res.json(state);
@@ -322,8 +363,20 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`SalesPilot AI Server running on http://localhost:${PORT}`);
+  });
+
+  server.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      const altPort = PORT + 1;
+      console.warn(`Port ${PORT} in use, automatically trying ${altPort}...`);
+      app.listen(altPort, '0.0.0.0', () => {
+        console.log(`SalesPilot AI Server running on http://localhost:${altPort}`);
+      });
+    } else {
+      console.error('Server error:', err);
+    }
   });
 }
 
