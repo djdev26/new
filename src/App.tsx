@@ -195,9 +195,11 @@ export default function App() {
 
   // Autonomous Showroom Switch Handler
   const handleSelectShowroom = useCallback(
-    (id: ShowroomId, source: 'user' | 'agent' = 'user') => {
-      setCurrentShowroomId(id);
-      const showroom = SHOWROOMS_DATA[id];
+    (id: string, source: 'user' | 'agent' = 'user') => {
+      const validId: ShowroomId =
+        id === 'laptop' ? 'laptops' : (SHOWROOMS_DATA[id as ShowroomId] ? (id as ShowroomId) : 'cars');
+      setCurrentShowroomId(validId);
+      const showroom = SHOWROOMS_DATA[validId] || SHOWROOMS_DATA.cars;
 
       if (source === 'agent') {
         setLastAutonomousSwitch({
@@ -210,8 +212,8 @@ export default function App() {
       logToolCall(
         'switch_showroom',
         `${source === 'agent' ? 'Autonomous AI' : 'Manual'} Switch to ${showroom.name.split('(')[0]}`,
-        { showroomId: id, triggeredBy: source },
-        `Rendered 3D hardware viewport for ${showroom.name} with ${showroom.hotspots.length} interactive hotspots. Base price updated to ₹${showroom.basePrice.toLocaleString('en-IN')}.`
+        { showroomId: validId, triggeredBy: source },
+        `Rendered 3D hardware viewport for ${showroom.name} with ${showroom.hotspots?.length || 0} interactive hotspots. Base price updated to ₹${showroom.basePrice.toLocaleString('en-IN')}.`
       );
 
       // Recalculate quote based on new showroom base price
@@ -242,7 +244,7 @@ export default function App() {
   const handleNegotiateDiscount = useCallback(
     (requestedDiscount: number = 20, reason: string = 'Autonomous Closer Negotiation') => {
       setNegotiatedDiscount(requestedDiscount);
-      const showroom = SHOWROOMS_DATA[currentShowroomId];
+      const showroom = SHOWROOMS_DATA[currentShowroomId] || SHOWROOMS_DATA.cars;
       const unitBase = showroom.basePrice;
       const baseTotal = unitBase * orderQuantity;
       const discountAmt = Math.round(baseTotal * (requestedDiscount / 100));
@@ -285,7 +287,7 @@ export default function App() {
   const handleTriggerAgenticTool = (toolName: AgenticToolType, args: Record<string, any>) => {
     switch (toolName) {
       case 'switch_showroom':
-        handleSelectShowroom(args.showroomId || 'bike', 'agent');
+        handleSelectShowroom(args.showroomId || 'cars', 'agent');
         break;
       case 'negotiate_discount':
         handleNegotiateDiscount(args.requestedDiscount || 20, 'Manual evaluator simulation');
@@ -614,20 +616,20 @@ export default function App() {
     const initialState = getInitialCustomerState(conversationId);
     setCustomerState(initialState);
     setScenarioStepIndex(0);
-    setCurrentShowroomId('bike');
+    setCurrentShowroomId('cars');
     setNegotiatedDiscount(15);
     setTranscript([
       {
         id: 'init-1',
         speaker: 'agent',
-        text: "Hello Priya! Welcome to SalesPilot AI with full Agora Voice AI. I'm your autonomous sales representative. I can guide you through our 3D showrooms for electric superbikes, neural laptops, or smart appliances, negotiate bulk pricing, or take instant orders. What would you like to explore?",
+        text: "Hello Priya! Welcome to SalesPilot AI with full Agora Voice AI. I'm your autonomous sales representative. I can guide you through our 3D showrooms for performance sports cars, neural laptops, or smart appliances, negotiate bulk pricing, or take instant orders. What would you like to explore?",
         timestamp: '10:00 AM',
       },
     ]);
     showToast('Reset demo state to initial buyer baseline.');
   };
 
-  const currentShowroom = SHOWROOMS_DATA[currentShowroomId] || SHOWROOMS_DATA.bike;
+  const currentShowroom = SHOWROOMS_DATA[currentShowroomId] || SHOWROOMS_DATA.cars;
 
   return (
     <div className="min-h-screen bg-[#EEF2F6] text-slate-800 flex flex-col selection:bg-indigo-500 selection:text-white">

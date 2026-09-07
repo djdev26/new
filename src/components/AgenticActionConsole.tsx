@@ -51,24 +51,22 @@ export const AgenticActionConsole: React.FC<AgenticActionConsoleProps> = ({
   };
 
   return (
-    <div className="rounded-2xl border border-white bg-white/80 backdrop-blur-md p-4 shadow-sm text-slate-800">
+    <div className="rounded-3xl border border-white bg-white/80 backdrop-blur-md p-6 shadow-sm text-slate-800 space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3 mb-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600">
-            <Terminal className="h-4 w-4" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-200">
+            <Terminal className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                Autonomous Agent Action Dispatcher
-              </h3>
-              <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                Live Tool Execution
+              <h2 className="text-base font-bold text-slate-900">Autonomous Website Control & Tool Dispatcher</h2>
+              <span className="rounded-full bg-violet-100 text-violet-800 text-[10px] font-bold px-2 py-0.5">
+                Full-Stack Dispatcher
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium">
-              Real-time browser control, showroom switching, pricing negotiation, and database state updates
+            <p className="text-xs text-slate-500 font-medium">
+              Autonomous execution of UI showroom switches, dynamic price drops, checkout modals & CRM mutations
             </p>
           </div>
         </div>
@@ -79,20 +77,20 @@ export const AgenticActionConsole: React.FC<AgenticActionConsoleProps> = ({
             Simulate Tool:
           </span>
           <button
-            onClick={() => onTriggerTool('switch_showroom', { showroomId: 'bike', reason: 'Customer inquired about EV mobility' })}
+            onClick={() => onTriggerTool('switch_showroom', { showroomId: 'cars', reason: 'Customer inquired about luxury supercars & SUVs' })}
             disabled={isExecuting}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 hover:border-indigo-300 shadow-2xs transition-all disabled:opacity-50"
           >
-            <Bike className="h-3 w-3 text-indigo-600" />
-            <span>Switch: Bike</span>
+            <Car className="h-3 w-3 text-red-600" />
+            <span>Switch: Cars</span>
           </button>
           <button
-            onClick={() => onTriggerTool('switch_showroom', { showroomId: 'laptop', reason: 'Customer requested developer AI hardware' })}
+            onClick={() => onTriggerTool('switch_showroom', { showroomId: 'laptops', reason: 'Customer requested developer AI hardware' })}
             disabled={isExecuting}
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 hover:border-indigo-300 shadow-2xs transition-all disabled:opacity-50"
           >
             <Laptop className="h-3 w-3 text-indigo-600" />
-            <span>Switch: Laptop</span>
+            <span>Switch: Laptops</span>
           </button>
           <button
             onClick={() => onTriggerTool('switch_showroom', { showroomId: 'appliances', reason: 'Customer requested kitchen smart appliances' })}
@@ -100,7 +98,7 @@ export const AgenticActionConsole: React.FC<AgenticActionConsoleProps> = ({
             className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:bg-slate-50 hover:border-indigo-300 shadow-2xs transition-all disabled:opacity-50"
           >
             <Refrigerator className="h-3 w-3 text-emerald-600" />
-            <span>Switch: Fridge</span>
+            <span>Switch: Appliances</span>
           </button>
           <button
             onClick={() => onTriggerTool('negotiate_discount', { requestedQty: 25, requestedDiscount: 15 })}
